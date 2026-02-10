@@ -147,26 +147,15 @@ export function calculatePumpPressure(
   // Viscosity (approximation for water/ACN mixtures at 25°C)
   const viscosity = 1.0; // mPa·s
   
-  // Calculate linear velocity from flow rate
-  // F = A × u, where A = π × r²
-  const radiusMm = columnDiameter / 2; // mm
-  const areaMm2 = Math.PI * radiusMm * radiusMm; // mm²
-  const areaCm2 = areaMm2 / 100; // convert to cm²
-  const linearVelocityCmPerMin = flowRate / areaCm2; // mL/min ÷ cm² = cm/min
-  const linearVelocityMmPerSec = (linearVelocityCmPerMin * 10) / 60; // convert to mm/s
-  
-  // Flow resistance parameter (empirical, typically 500-1000)
-  const phi = 800;
-  
-  // Pressure equation: ΔP = (φ × η × u × L) / dp²
-  // Units: (dimensionless × mPa·s × mm/s × mm) / μm²
-  // Result in: (mPa·s × mm²/s) / μm²
-  // Conversion: 1 bar = 100000 Pa = 100000000 mPa
-  // But we need proper unit conversion
-  
   // Simplified empirical formula for HPLC (based on literature)
   // ΔP (bar) ≈ (F × L × η × K) / (d² × dp²)
-  // where K is empirical constant ≈ 10 for these units
+  // where:
+  // - F = flow rate (mL/min)
+  // - L = column length (mm)
+  // - η = viscosity (mPa·s)
+  // - K = empirical constant ≈ 10 for these units
+  // - d = column diameter (mm)
+  // - dp = particle size (μm)
   const K = 10;
   const pressure = (flowRate * columnLength * viscosity * K) / 
                    (columnDiameter * columnDiameter * particleSize * particleSize);
