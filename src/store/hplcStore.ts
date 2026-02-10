@@ -9,6 +9,7 @@ import type {
   MobilePhase,
   Sample,
   SimulationResult,
+  ChromatogramData,
 } from "~/types/hplc";
 
 interface HPLCStore {
@@ -24,6 +25,7 @@ interface HPLCStore {
 
   // Simulation results
   simulationResult: SimulationResult | null;
+  chromatogramData: ChromatogramData | null;
   isRunning: boolean;
 
   // Saved methods
@@ -40,6 +42,7 @@ interface HPLCStore {
   updateRunTime: (runTime: number) => void;
 
   setSimulationResult: (result: SimulationResult | null) => void;
+  setChromatogramData: (data: ChromatogramData | null) => void;
   setIsRunning: (isRunning: boolean) => void;
 
   saveMethod: (name: string, description?: string) => void;
@@ -107,6 +110,7 @@ export const useHPLCStore = create<HPLCStore>()(
       sample: null,
       runTime: 20,
       simulationResult: null,
+      chromatogramData: null,
       isRunning: false,
       savedMethods: [],
 
@@ -135,6 +139,8 @@ export const useHPLCStore = create<HPLCStore>()(
       updateRunTime: (runTime) => set({ runTime }),
 
       setSimulationResult: (simulationResult) => set({ simulationResult }),
+
+      setChromatogramData: (chromatogramData) => set({ chromatogramData }),
 
       setIsRunning: (isRunning) => set({ isRunning }),
 
@@ -190,6 +196,7 @@ export const useHPLCStore = create<HPLCStore>()(
           sample: null,
           runTime: 20,
           simulationResult: null,
+          chromatogramData: null,
           isRunning: false,
         }),
     }),
