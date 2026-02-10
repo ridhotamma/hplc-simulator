@@ -9,7 +9,7 @@ export type StationaryPhaseType =
   | "Amino"
   | "Cyano";
 
-export type DetectorType = "UV" | "PDA" | "DAD" | "Fluorescence" | "RI" | "ELSD" | "MS";
+export type DetectorType = "UV" | "PDA" | "Fluorescence" | "RI" | "ELSD" | "MS";
 
 export type SolventType =
   | "Water"

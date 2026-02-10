@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { HiChartBar } from "react-icons/hi";
 import { FaFlask, FaCog, FaSave } from "react-icons/fa";
 import { Toaster } from "react-hot-toast";
@@ -44,16 +44,10 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [showContent, setShowContent] = useState(false);
   const [mobilePage, setMobilePage] = useState<MobilePage>("sample");
+  const isSimulatingRef = useRef(false);
 
-  const handleRunSimulation = useCallback(() => {
-    if (!sample || sample.components.length === 0) {
-      alert("Please select at least one compound in the sample");
-      return;
-    }
-
-    setIsRunning(true);
-    
-    // Calculate pump pressure using Darcy's law
+  // Calculate and update pressure/dead volume when column or pump settings change
+  useEffect(() => {
     const pressure = calculatePumpPressure(
       pump.flowRate,
       column.length,
@@ -61,12 +55,29 @@ function App() {
       column.particleSize
     );
     
-    // Calculate column dead volume
     const deadVolume = calculateDeadVolume(column);
     
-    // Update store with calculated values
-    updatePump({ pressure });
-    updateColumn({ deadVolume });
+    // Only update if values actually changed to avoid unnecessary re-renders
+    if (pump.pressure !== pressure) {
+      updatePump({ pressure });
+    }
+    if (column.deadVolume !== deadVolume) {
+      updateColumn({ deadVolume });
+    }
+  }, [pump.flowRate, column.length, column.internalDiameter, column.particleSize, column.temperature, column.stationaryPhase]);
+
+  const handleRunSimulation = useCallback(() => {
+    if (!sample || sample.components.length === 0) {
+      alert("Please select at least one compound in the sample");
+      return;
+    }
+
+    if (isSimulatingRef.current) {
+      return; // Prevent concurrent simulations
+    }
+
+    isSimulatingRef.current = true;
+    setIsRunning(true);
     
     // Simulate with a small delay for realism
     setTimeout(() => {
@@ -82,15 +93,16 @@ function App() {
       
       setChromatogramData(data);
       setIsRunning(false);
+      isSimulatingRef.current = false;
     }, 500);
-  }, [sample, column, mobilePhase, detector, pump.flowRate, runTime, injection.volume, setIsRunning, updatePump, updateColumn]);
+  }, [sample, column, mobilePhase, detector, pump.flowRate, runTime, injection.volume]);
 
-  // Auto-simulate when parameters change
+  // Auto-simulate when sample or parameters change
   useEffect(() => {
-    if (sample && sample.components.length > 0) {
+    if (sample && sample.components.length > 0 && !isSimulatingRef.current) {
       handleRunSimulation();
     }
-  }, [sample, handleRunSimulation]);
+  }, [sample?.components.length, handleRunSimulation]);
 
   const peakTableColumns: TableColumn<Peak & { index: number }>[] = [
     {
