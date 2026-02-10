@@ -72,8 +72,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           </svg>
         </div>
 
-        <div>
-            <h1 className="text-2xl text-gray-800">HPLC Simulator</h1>
+        <div className="text-center">
+            <h1 className="text-2xl text-gray-800 uppercase">HPLC Simulator</h1>
+            <p>Version 0.0.1</p>
         </div>
       </div>
 

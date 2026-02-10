@@ -142,7 +142,13 @@ export const ChromatogramChart: React.FC<ChromatogramChartProps> = ({
     // Add peak markers and labels
     data.peaks.forEach((peak, idx) => {
       const x = xScale(peak.retentionTime);
-      const y = yScale(peak.height);
+      
+      // Find the actual signal value at the retention time
+      const closestIndex = data.time.findIndex((t) => Math.abs(t - peak.retentionTime) < 0.005) || 
+                           data.time.reduce((closest, t, i) => 
+                             Math.abs(t - peak.retentionTime) < Math.abs(data.time[closest] - peak.retentionTime) ? i : closest, 0);
+      const signalValue = data.signal[closestIndex];
+      const y = yScale(signalValue);
 
       // Peak marker
       g.append("circle")
