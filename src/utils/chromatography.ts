@@ -96,8 +96,8 @@ export function calculateDeadTime(
 
 /**
  * Van Deemter equation: H = A + B/u + C*u
- * H = plate height
- * u = linear velocity
+ * H = plate height (μm)
+ * u = linear velocity (mm/min)
  * A = eddy diffusion (multiple flow paths)
  * B = longitudinal diffusion
  * C = mass transfer resistance
@@ -106,10 +106,10 @@ export function calculatePlateHeight(
   particleSize: number,
   linearVelocity: number
 ): number {
-  // Empirical coefficients
-  const A = 2 * particleSize; // Eddy diffusion
-  const B = 0.01; // Longitudinal diffusion coefficient
-  const C = 0.05 * particleSize; // Mass transfer coefficient
+  // Empirical coefficients based on particle size
+  const A = 2 * particleSize; // Eddy diffusion (typically 1-2 × dp)
+  const B = 20; // Longitudinal diffusion coefficient (μm²/min)
+  const C = 0.01 * particleSize; // Mass transfer coefficient
   
   const H = A + B / linearVelocity + C * linearVelocity;
   return H;
@@ -124,6 +124,39 @@ export function calculateLinearVelocity(
   deadTime: number
 ): number {
   return columnLength / deadTime; // mm/min
+}
+
+/**
+ * Calculate pump pressure using Darcy's law
+ * ΔP = (η × u × L) / (dp² × k)
+ * Simplified: ΔP ≈ (F × η × L) / (d² × dp²)
+ * where:
+ * - ΔP = pressure drop (bar)
+ * - F = flow rate (mL/min)
+ * - η = viscosity (mPa·s, ~1 for water/ACN mixtures)
+ * - L = column length (mm)
+ * - d = column diameter (mm)
+ * - dp = particle size (μm)
+ */
+export function calculatePumpPressure(
+  flowRate: number,
+  columnLength: number,
+  columnDiameter: number,
+  particleSize: number
+): number {
+  // Viscosity (approximation for water/ACN mixtures at 25°C)
+  const viscosity = 1.0; // mPa·s
+  
+  // Convert to consistent units
+  const L = columnLength; // mm
+  const d = columnDiameter; // mm
+  const dp = particleSize / 1000; // convert μm to mm
+  
+  // Empirical pressure equation (simplified Darcy's law)
+  // Pressure in bar
+  const pressure = (flowRate * viscosity * L * 0.01) / (Math.PI * (d/2) * (d/2) * dp * dp);
+  
+  return Number(Math.min(pressure, 600).toFixed(1)); // Cap at 600 bar (typical UHPLC limit)
 }
 
 /**
@@ -214,12 +247,22 @@ export function predictRetentionTime(
     
     let retentionTime = deadTime + tG + delayTime;
     
-    // pH effect on ionizable compounds
+    // pH effect on ionizable compounds (for acids/bases)
     if (compound.pKa.length > 0) {
       const pKa = compound.pKa[0];
       const pH = mobilePhase.pH;
-      const ionizationFactor = 1 / (1 + Math.pow(10, pKa - pH));
-      retentionTime *= (1 - 0.3 * ionizationFactor); // Ionized form elutes faster
+      
+      // Henderson-Hasselbalch: for acids, ionized at pH > pKa
+      // Ionized species are less retained in reversed-phase
+      let ionizationFactor: number;
+      if (compound.logP > 0) {
+        // Acidic compound
+        ionizationFactor = 1 / (1 + Math.pow(10, pKa - pH));
+      } else {
+        // Basic compound
+        ionizationFactor = 1 / (1 + Math.pow(10, pH - pKa));
+      }
+      retentionTime *= (1 - 0.4 * ionizationFactor); // Ionized form elutes faster
     }
     
     retentionTime *= Math.max(0.5, tempFactor);
@@ -239,7 +282,16 @@ export function predictRetentionTime(
     if (compound.pKa.length > 0) {
       const pKa = compound.pKa[0];
       const pH = mobilePhase.pH;
-      const ionizationFactor = 1 / (1 + Math.pow(10, pKa - pH));
+      
+      // Henderson-Hasselbalch equation
+      let ionizationFactor: number;
+      if (compound.logP > 0) {
+        // Acidic compound
+        ionizationFactor = 1 / (1 + Math.pow(10, pKa - pH));
+      } else {
+        // Basic compound  
+        ionizationFactor = 1 / (1 + Math.pow(10, pH - pKa));
+      }
       retentionTime *= (1 - 0.5 * ionizationFactor); // Ionized form elutes faster
     }
     
@@ -264,13 +316,26 @@ function gaussianPeak(
 
 /**
  * Calculate peak width at base (4σ for Gaussian)
+ * Includes extra-column band broadening
  */
 export function calculatePeakWidth(
   retentionTime: number,
-  theoreticalPlates: number
+  theoreticalPlates: number,
+  injectionVolume: number = 10
 ): number {
-  // w = 4σ = 4 * tR / √N
-  const width = (4 * retentionTime) / Math.sqrt(theoreticalPlates);
+  // Column contribution: σ_col² = tR² / N
+  const sigmaCol = retentionTime / Math.sqrt(theoreticalPlates);
+  
+  // Extra-column band broadening (injection, tubing, detector)
+  // Typical extra-column variance for modern HPLC: 10-30 μL²
+  const extraColumnVariance = Math.pow(injectionVolume * 0.001, 2); // Convert to min²
+  
+  // Total variance: σ_total² = σ_col² + σ_extra²
+  const sigmaTotalSquared = Math.pow(sigmaCol, 2) + extraColumnVariance;
+  const sigmaTotal = Math.sqrt(sigmaTotalSquared);
+  
+  // Peak width at base: w = 4σ
+  const width = 4 * sigmaTotal;
   return Number(width.toFixed(4));
 }
 
@@ -308,7 +373,8 @@ export function simulateChromatogram(
   mobilePhase: MobilePhase,
   detector: { wavelength: number; noiseLevel: number },
   flowRate: number,
-  runTime: number
+  runTime: number,
+  injectionVolume: number = 10
 ): ChromatogramData {
   // Calculate dead volume and time
   const deadVolume = calculateDeadVolume(column);
@@ -349,7 +415,7 @@ export function simulateChromatogram(
     if (retentionTime > runTime) return;
     
     // Calculate peak properties
-    const peakWidth = calculatePeakWidth(retentionTime, theoreticalPlates);
+    const peakWidth = calculatePeakWidth(retentionTime, theoreticalPlates, injectionVolume);
     const sigma = peakWidth / 4;
     
     // Peak height proportional to concentration and UV absorption

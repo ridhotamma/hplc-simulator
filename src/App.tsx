@@ -3,7 +3,7 @@ import { HiChartBar } from "react-icons/hi";
 import { FaFlask, FaCog, FaSave } from "react-icons/fa";
 import { Toaster } from "react-hot-toast";
 import { useHPLCStore } from "~/store/hplcStore";
-import { simulateChromatogram } from "~/utils/chromatography";
+import { simulateChromatogram, calculatePumpPressure, calculateDeadVolume } from "~/utils/chromatography";
 import { PumpControl } from "~/components/hplc/PumpControl";
 import { ColumnControl } from "~/components/hplc/ColumnControl";
 import { DetectorControl } from "~/components/hplc/DetectorControl";
@@ -27,11 +27,14 @@ const controlTabs: TabItem<ControlTab>[] = [
 function App() {
   const {
     pump,
+    injection,
     column,
     detector,
     mobilePhase,
     sample,
     runTime,
+    updatePump,
+    updateColumn,
     updateRunTime,
     setIsRunning,
   } = useHPLCStore();
@@ -50,6 +53,21 @@ function App() {
 
     setIsRunning(true);
     
+    // Calculate pump pressure using Darcy's law
+    const pressure = calculatePumpPressure(
+      pump.flowRate,
+      column.length,
+      column.internalDiameter,
+      column.particleSize
+    );
+    
+    // Calculate column dead volume
+    const deadVolume = calculateDeadVolume(column);
+    
+    // Update store with calculated values
+    updatePump({ pressure });
+    updateColumn({ deadVolume });
+    
     // Simulate with a small delay for realism
     setTimeout(() => {
       const data = simulateChromatogram(
@@ -58,13 +76,14 @@ function App() {
         mobilePhase,
         detector,
         pump.flowRate,
-        runTime
+        runTime,
+        injection.volume
       );
       
       setChromatogramData(data);
       setIsRunning(false);
     }, 500);
-  }, [sample, column, mobilePhase, detector, pump.flowRate, runTime, setIsRunning]);
+  }, [sample, column, mobilePhase, detector, pump.flowRate, runTime, injection.volume, setIsRunning, updatePump, updateColumn]);
 
   // Auto-simulate when parameters change
   useEffect(() => {
