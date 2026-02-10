@@ -22,7 +22,7 @@ const modeTabsData: TabItem<MobilePhaseMode>[] = [
 ];
 
 export const MobilePhaseControl: React.FC = () => {
-  const { mobilePhase, updateMobilePhase } = useHPLCStore();
+  const { mobilePhase, mobilePhaseFlowLinked, pump, updateMobilePhase, setMobilePhaseFlowLinked } = useHPLCStore();
   const [activeMode, setActiveMode] = useState<MobilePhaseMode>(mobilePhase.mode || "isocratic");
 
   const handleModeChange = (mode: MobilePhaseMode) => {
@@ -44,6 +44,44 @@ export const MobilePhaseControl: React.FC = () => {
         />
         
         <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <input
+              id="link-flow"
+              type="checkbox"
+              checked={mobilePhaseFlowLinked}
+              onChange={(e) => {
+                const linked = e.target.checked;
+                setMobilePhaseFlowLinked(linked);
+                if (linked) {
+                  updateMobilePhase({ flowRate: pump.flowRate });
+                }
+              }}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+            />
+            <label htmlFor="link-flow" className="text-sm text-gray-700">Link flow to pump</label>
+          </div>
+
+          <InputNumber
+            label={`Mobile Phase Flow Rate (mL/min)`}
+            value={mobilePhaseFlowLinked ? pump.flowRate : mobilePhase.flowRate}
+            onChange={(e) => {
+              const value = parseFloat(e.target.value);
+              if (isNaN(value) || value < 0.1 || value > 5) return;
+              if (mobilePhaseFlowLinked) {
+                // Keep pump and mobile phase aligned when linked
+                updateMobilePhase({ flowRate: value });
+              } else {
+                updateMobilePhase({ flowRate: value });
+              }
+            }}
+            min={0.1}
+            max={5}
+            step={0.1}
+            helperText={mobilePhaseFlowLinked ? "Controlled by pump" : "Range: 0.1 - 5.0 mL/min"}
+            allowDecimal
+            disabled={mobilePhaseFlowLinked}
+          />
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Solvent A

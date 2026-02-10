@@ -18,6 +18,7 @@ interface HPLCStore {
   column: ColumnSettings;
   detector: DetectorSettings;
   mobilePhase: MobilePhase;
+  mobilePhaseFlowLinked: boolean;
   sample: Sample | null;
   runTime: number;
 
@@ -34,6 +35,7 @@ interface HPLCStore {
   updateColumn: (column: Partial<ColumnSettings>) => void;
   updateDetector: (detector: Partial<DetectorSettings>) => void;
   updateMobilePhase: (mobilePhase: Partial<MobilePhase>) => void;
+  setMobilePhaseFlowLinked: (linked: boolean) => void;
   updateSample: (sample: Sample | null) => void;
   updateRunTime: (runTime: number) => void;
 
@@ -101,6 +103,7 @@ export const useHPLCStore = create<HPLCStore>()(
       column: defaultColumn,
       detector: defaultDetector,
       mobilePhase: defaultMobilePhase,
+      mobilePhaseFlowLinked: true,
       sample: null,
       runTime: 20,
       simulationResult: null,
@@ -124,6 +127,8 @@ export const useHPLCStore = create<HPLCStore>()(
         set((state) => ({
           mobilePhase: { ...state.mobilePhase, ...mobilePhase },
         })),
+
+      setMobilePhaseFlowLinked: (linked) => set({ mobilePhaseFlowLinked: linked }),
 
       updateSample: (sample) => set({ sample }),
 
@@ -181,6 +186,7 @@ export const useHPLCStore = create<HPLCStore>()(
           column: defaultColumn,
           detector: defaultDetector,
           mobilePhase: defaultMobilePhase,
+          mobilePhaseFlowLinked: true,
           sample: null,
           runTime: 20,
           simulationResult: null,
@@ -191,6 +197,7 @@ export const useHPLCStore = create<HPLCStore>()(
       name: "hplc-storage",
       partialize: (state) => ({
         savedMethods: state.savedMethods,
+        mobilePhaseFlowLinked: state.mobilePhaseFlowLinked,
       }),
     }
   )

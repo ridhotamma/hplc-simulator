@@ -31,10 +31,12 @@ function App() {
     column,
     detector,
     mobilePhase,
+    mobilePhaseFlowLinked,
     sample,
     runTime,
     updatePump,
     updateColumn,
+    updateMobilePhase,
     updateRunTime,
     setIsRunning,
   } = useHPLCStore();
@@ -49,7 +51,7 @@ function App() {
   // Calculate and update pressure/dead volume when column or pump settings change
   useEffect(() => {
     const pressure = calculatePumpPressure(
-      pump.flowRate,
+      mobilePhase.flowRate,
       column.length,
       column.internalDiameter,
       column.particleSize
@@ -64,7 +66,14 @@ function App() {
     if (column.deadVolume !== deadVolume) {
       updateColumn({ deadVolume });
     }
-  }, [pump.flowRate, column.length, column.internalDiameter, column.particleSize, column.temperature, column.stationaryPhase]);
+  }, [column, mobilePhase.flowRate, column.length, column.internalDiameter, column.particleSize, column.temperature, column.stationaryPhase, pump.pressure, updatePump, updateColumn, column.deadVolume]);
+
+  // Keep mobile phase flow tied to pump when linking is enabled
+  useEffect(() => {
+    if (mobilePhaseFlowLinked && mobilePhase.flowRate !== pump.flowRate) {
+      updateMobilePhase({ flowRate: pump.flowRate });
+    }
+  }, [mobilePhaseFlowLinked, pump.flowRate, mobilePhase.flowRate, updateMobilePhase]);
 
   const handleRunSimulation = useCallback(() => {
     if (!sample || sample.components.length === 0) {
@@ -86,7 +95,7 @@ function App() {
         column,
         mobilePhase,
         detector,
-        pump.flowRate,
+        mobilePhase.flowRate,
         runTime,
         injection.volume
       );
@@ -95,14 +104,14 @@ function App() {
       setIsRunning(false);
       isSimulatingRef.current = false;
     }, 500);
-  }, [sample, column, mobilePhase, detector, pump.flowRate, runTime, injection.volume]);
+  }, [sample, column, mobilePhase, detector, runTime, injection.volume, setIsRunning]);
 
   // Auto-simulate when sample or parameters change
   useEffect(() => {
     if (sample && sample.components.length > 0 && !isSimulatingRef.current) {
       handleRunSimulation();
     }
-  }, [sample?.components.length, handleRunSimulation]);
+  }, [sample, sample?.components.length, handleRunSimulation]);
 
   const peakTableColumns: TableColumn<Peak & { index: number }>[] = [
     {
@@ -255,7 +264,7 @@ function App() {
                 </h2>
                 {sample && (
                   <p className="text-xs text-gray-600 mt-1">
-                    Sample: {sample.components.length} compound(s) | 
+                    Sample: {sample.components.length} compound(s) | {" "}
                     {detector.type} Detector @ {detector.wavelength} nm
                   </p>
                 )}

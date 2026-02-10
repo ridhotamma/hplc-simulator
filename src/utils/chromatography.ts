@@ -19,11 +19,12 @@ export function calculateGradientComposition(
     return mobilePhase.percentB;
   }
 
-  const steps = mobilePhase.gradientSteps;
+  const steps = [...mobilePhase.gradientSteps].sort((a, b) => a.time - b.time);
+  const effectiveFlow = Math.max(mobilePhase.flowRate, 0.01);
   
   // Account for gradient delay volume
   const delayTime = mobilePhase.gradientDelayVolume
-    ? mobilePhase.gradientDelayVolume / mobilePhase.flowRate
+    ? mobilePhase.gradientDelayVolume / effectiveFlow
     : 0;
   const adjustedTime = time - delayTime;
   
@@ -91,7 +92,8 @@ export function calculateDeadTime(
   deadVolume: number,
   flowRate: number
 ): number {
-  return Number((deadVolume / flowRate).toFixed(3));
+  const effectiveFlow = Math.max(flowRate, 0.01);
+  return Number((deadVolume / effectiveFlow).toFixed(3));
 }
 
 /**
@@ -144,23 +146,27 @@ export function calculatePumpPressure(
   columnDiameter: number,
   particleSize: number
 ): number {
-  // Viscosity (approximation for water/ACN mixtures at 25°C)
-  const viscosity = 1.0; // mPa·s
-  
-  // Simplified empirical formula for HPLC (based on literature)
-  // ΔP (bar) ≈ (F × L × η × K) / (d² × dp²)
-  // where:
-  // - F = flow rate (mL/min)
-  // - L = column length (mm)
-  // - η = viscosity (mPa·s)
-  // - K = empirical constant ≈ 10 for these units
-  // - d = column diameter (mm)
-  // - dp = particle size (μm)
-  const K = 10;
-  const pressure = (flowRate * columnLength * viscosity * K) / 
-                   (columnDiameter * columnDiameter * particleSize * particleSize);
-  
-  return Number(Math.min(pressure, 600).toFixed(1)); // Cap at 600 bar (typical UHPLC limit)
+  // Physically grounded Kozeny-Carman / Darcy approximation
+  const viscosityPaS = 0.001; // 1 mPa·s typical for water/ACN at 25 °C
+  const epsilon = 0.4; // bed porosity
+  const kcFactor = (180 * Math.pow(1 - epsilon, 2)) / Math.pow(epsilon, 3);
+
+  // Unit conversions
+  const flowM3s = (flowRate * 1e-6) / 60; // m^3/s
+  const lengthM = columnLength / 1000; // mm -> m
+  const diameterM = columnDiameter / 1000; // mm -> m
+  const particleM = particleSize * 1e-6; // μm -> m
+
+  // Interstitial velocity
+  const area = Math.PI * Math.pow(diameterM / 2, 2);
+  const velocity = flowM3s / area; // m/s
+
+  // Pressure drop (Pa) then convert to bar
+  const deltaP_Pa = kcFactor * viscosityPaS * lengthM * velocity / Math.pow(particleM, 2);
+  const deltaP_bar = deltaP_Pa / 1e5;
+
+  // Cap at 1000 bar for safety display
+  return Number(Math.min(deltaP_bar, 1000).toFixed(1));
 }
 
 /**
@@ -171,7 +177,8 @@ export function calculateTheoreticalPlates(
   columnLength: number,
   plateHeight: number
 ): number {
-  return Math.floor(columnLength / plateHeight);
+  const plates = columnLength / plateHeight;
+  return Math.max(1, Math.floor(plates));
 }
 
 /**
@@ -229,47 +236,14 @@ export function predictRetentionTime(
   const tempFactor = 1 - (column.temperature - 25) * 0.02;
   
   if (mobilePhase.mode === "gradient" && mobilePhase.gradientSteps && mobilePhase.gradientSteps.length > 0) {
-    // Gradient elution - simplified gradient retention equation
-    const initialPercent = mobilePhase.percentB / 100;
-    const steps = mobilePhase.gradientSteps;
-    const lastStep = steps[steps.length - 1];
-    const finalPercent = lastStep.percentB / 100;
-    const gradientTime = lastStep.time;
-    
-    // Average gradient slope
-    const b = (finalPercent - initialPercent) / gradientTime;
-    
-    // Simplified gradient retention equation
-    // tR ≈ (1/b) * ln(2.3 * k'w * S * b + 1) + t0
-    const k_initial = Math.pow(10, logKw - S * initialPercent);
-    const tG = b > 0 ? (1 / b) * Math.log(2.3 * k_initial * S * b + 1) : 0;
-    
-    // Account for gradient delay
-    const delayTime = mobilePhase.gradientDelayVolume
-      ? mobilePhase.gradientDelayVolume / mobilePhase.flowRate
-      : 0;
-    
-    let retentionTime = deadTime + tG + delayTime;
-    
-    // pH effect on ionizable compounds (for acids/bases)
-    if (compound.pKa.length > 0) {
-      const pKa = compound.pKa[0];
-      const pH = mobilePhase.pH;
-      
-      // Henderson-Hasselbalch: for acids, ionized at pH > pKa
-      // Ionized species are less retained in reversed-phase
-      let ionizationFactor: number;
-      if (compound.logP > 0) {
-        // Acidic compound
-        ionizationFactor = 1 / (1 + Math.pow(10, pKa - pH));
-      } else {
-        // Basic compound
-        ionizationFactor = 1 / (1 + Math.pow(10, pH - pKa));
-      }
-      retentionTime *= (1 - 0.4 * ionizationFactor); // Ionized form elutes faster
-    }
-    
-    retentionTime *= Math.max(0.5, tempFactor);
+    const retentionTime = estimateGradientRetentionTime(
+      compound,
+      logKw,
+      S,
+      mobilePhase,
+      deadTime,
+      tempFactor
+    );
     return Number(retentionTime.toFixed(3));
   } else {
     // Isocratic elution
@@ -304,6 +278,59 @@ export function predictRetentionTime(
   }
 }
 
+// Iteratively estimate gradient retention time by sampling the programmed profile
+function estimateGradientRetentionTime(
+  compound: Compound,
+  logKw: number,
+  solventStrength: number,
+  mobilePhase: MobilePhase,
+  deadTime: number,
+  tempFactor: number
+): number {
+  const dt = 0.01; // minutes
+  const maxIterations = 10;
+
+  // pH-dependent adjustment applied to k at each time slice
+  let ionizationScale = 1;
+  if (compound.pKa.length > 0) {
+    const pKa = compound.pKa[0];
+    const pH = mobilePhase.pH;
+    if (compound.logP > 0) {
+      // Acidic
+      ionizationScale = 1 - 0.4 * (1 / (1 + Math.pow(10, pKa - pH)));
+    } else {
+      // Basic
+      ionizationScale = 1 - 0.4 * (1 / (1 + Math.pow(10, pH - pKa)));
+    }
+  }
+
+  let tR = deadTime * (1 + Math.pow(10, logKw - solventStrength * (mobilePhase.percentB / 100)));
+
+  for (let iter = 0; iter < maxIterations; iter++) {
+    let totalK = 0;
+    let steps = 0;
+
+    for (let t = 0; t <= tR; t += dt) {
+      const phi = calculateGradientComposition(mobilePhase, t) / 100;
+      const k = Math.pow(10, logKw - solventStrength * phi) * ionizationScale;
+      totalK += k;
+      steps += 1;
+    }
+
+    const kAvg = steps > 0 ? totalK / steps : 0;
+    const newTR = deadTime * (1 + kAvg);
+
+    if (Math.abs(newTR - tR) < 0.001) {
+      tR = newTR;
+      break;
+    }
+    tR = newTR;
+  }
+
+  // Apply temperature scaling (min 50% to avoid negative times)
+  return Math.max(deadTime, tR * Math.max(0.5, tempFactor));
+}
+
 /**
  * Generate Gaussian peak
  * y = A * exp(-0.5 * ((x - μ) / σ)²)
@@ -325,14 +352,16 @@ function gaussianPeak(
 export function calculatePeakWidth(
   retentionTime: number,
   theoreticalPlates: number,
-  injectionVolume: number = 10
+  injectionVolume: number = 10,
+  flowRate: number = 1
 ): number {
   // Column contribution: σ_col² = tR² / N
   const sigmaCol = retentionTime / Math.sqrt(theoreticalPlates);
   
   // Extra-column band broadening (injection, tubing, detector)
-  // Typical extra-column variance for modern HPLC: 10-30 μL²
-  const extraColumnVariance = Math.pow(injectionVolume * 0.001, 2); // Convert to min²
+  // Convert injection volume to a time-domain variance using flow rate (t = V/F)
+  const extraTime = (injectionVolume / 1000) / Math.max(flowRate, 0.01); // minutes
+  const extraColumnVariance = Math.pow(extraTime, 2);
   
   // Total variance: σ_total² = σ_col² + σ_extra²
   const sigmaTotalSquared = Math.pow(sigmaCol, 2) + extraColumnVariance;
@@ -390,7 +419,7 @@ export function simulateChromatogram(
   const theoreticalPlates = calculateTheoreticalPlates(column.length, plateHeight);
   
   // Generate time array (data points every 0.01 min)
-  const timePoints = Math.floor(runTime / 0.01);
+  const timePoints = Math.floor(runTime / 0.01) + 1;
   const time: number[] = [];
   const signal: number[] = [];
   const baseline: number[] = [];
@@ -419,7 +448,7 @@ export function simulateChromatogram(
     if (retentionTime > runTime) return;
     
     // Calculate peak properties
-    const peakWidth = calculatePeakWidth(retentionTime, theoreticalPlates, injectionVolume);
+    const peakWidth = calculatePeakWidth(retentionTime, theoreticalPlates, injectionVolume, flowRate);
     const sigma = peakWidth / 4;
     
     // Peak height proportional to concentration and UV absorption
