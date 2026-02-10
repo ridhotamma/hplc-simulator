@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { HiOutlineClipboardList } from "react-icons/hi";
 import { FaPlus } from "react-icons/fa";
+import toast from "react-hot-toast";
 import { useHPLCStore } from "~/store/hplcStore";
 import { Button, InputText } from "~/components/ui";
 import { Modal } from "~/components/ui/Modal";
@@ -14,9 +15,22 @@ export const MethodManager: React.FC = () => {
   const handleSave = () => {
     if (methodName.trim()) {
       saveMethod(methodName, methodDescription);
+      toast.success(`Method "${methodName}" saved successfully`);
       setMethodName("");
       setMethodDescription("");
       setShowSaveDialog(false);
+    }
+  };
+
+  const handleLoad = (id: string, name: string) => {
+    loadMethod(id);
+    toast.success(`Method "${name}" loaded`);
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (confirm(`Delete method "${name}"?`)) {
+      deleteMethod(id);
+      toast.success(`Method "${name}" deleted`);
     }
   };
 
@@ -112,18 +126,14 @@ export const MethodManager: React.FC = () => {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => loadMethod(method.id)}
+                  onClick={() => handleLoad(method.id, method.name)}
                 >
                   Load
                 </Button>
                 <Button
                   size="sm"
                   variant="destructive"
-                  onClick={() => {
-                    if (confirm(`Delete method "${method.name}"?`)) {
-                      deleteMethod(method.id);
-                    }
-                  }}
+                  onClick={() => handleDelete(method.id, method.name)}
                 >
                   Delete
                 </Button>
