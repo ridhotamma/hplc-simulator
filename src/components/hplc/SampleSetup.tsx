@@ -5,6 +5,7 @@ import { useHPLCStore } from "~/store/hplcStore";
 import { compoundLibrary } from "~/data/compounds";
 import { Button, InputNumber, Modal } from "~/components/ui";
 import type { SampleComponent } from "~/types/hplc";
+import { IoRefresh } from "react-icons/io5";
 
 export const SampleSetup: React.FC = () => {
   const { sample, updateSample } = useHPLCStore();
@@ -64,13 +65,30 @@ export const SampleSetup: React.FC = () => {
       compound.category.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  const clearAll = () => {
+    setSelectedCompoundIds(new Set());
+    setConcentrations(new Map());
+    updateSample(null);
+    toast.success("All compounds cleared");
+  };
+
   return (
     <div className="space-y-3 p-3 bg-white rounded-lg shadow-md border border-gray-200 h-full flex flex-col">
       {/* Title */}
-      <div>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-lg font-semibold text-gray-800">
           Sample Composition
         </h3>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={clearAll}
+          disabled={selectedCompoundIds.size === 0 && !sample}
+          className="flex items-center gap-2"
+        >
+          <IoRefresh size={14} />
+          <span>Clear All</span>
+        </Button>
       </div>
 
       {/* Search Input */}
