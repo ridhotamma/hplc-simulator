@@ -24,3 +24,6 @@ export type { SplashScreenProps } from "./SplashScreen";
 
 export { Modal } from "./Modal";
 export type { ModalProps } from "./Modal";
+
+export { Switch } from "./Switch";
+export type { SwitchProps } from "./Switch";
