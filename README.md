@@ -1,73 +1,60 @@
-# React + TypeScript + Vite
+# HPLC Simulator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive single-page app to explore HPLC method setup and visualize simulated chromatograms. Built with React + TypeScript + Vite.
 
-Currently, two official plugins are available:
+## What it simulates
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Pump, column, detector, mobile phase (isocratic or gradient), and sample composition
+- Gradient programming with delay volume and re-equilibration considerations
+- Chromatogram generation with peaks, areas, widths, asymmetry, and resolution
+- Pressure estimate as a safety indicator
 
-## React Compiler
+## How calculations work (plain language)
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+- **Void/dead volume**: From column length, inner diameter, and a typical porosity (40%).
+- **Dead time (t₀)**: Void volume ÷ flow rate.
+- **Linear velocity**: Column length ÷ t₀.
+- **Plate height & efficiency**: Van Deemter-style curve using particle size and linear velocity; plates = length ÷ plate height (floored to at least 1).
+- **Pressure**: Kozeny-Carman/Darcy approximation using flow, column dimensions, particle size, and viscosity; capped for display.
+- **Gradient composition**: Point-by-point %B from the programmed steps, with gradient delay volume considered.
+- **Retention time**:
+  - Isocratic: Linear Solvent Strength (LSS) model using logP-derived logKw, solvent strength S, %B, pH effect, and temperature factor.
+  - Gradient: Iterative, time-sliced LSS using the live %B from the gradient profile until convergence, with pH and temperature effects.
+- **Peak shape**: Gaussian with width from plates plus extra-column broadening (injection volume scaled by flow).
+- **Peak metrics**: Height (concentration × UV absorbance factor), area, asymmetry (simple tailing model), and resolution between neighbors.
+- **Noise**: Adds random baseline noise from detector settings.
 
-## Expanding the ESLint configuration
+## Using the app
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. **Pick compounds** in Sample Composition, set concentrations, and apply.
+2. **Configure settings** under Pump, Column, Detector, and Mobile Phase. Use gradient presets or add your own steps.
+3. **Run** (auto-runs on changes) to see the chromatogram and peak table.
+4. **Save/load methods** via Methods tab.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Key assumptions and limits
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Models are educational approximations, not instrument-specific predictions.
+- Viscosity is fixed at ~1 mPa·s (water/ACN at 25 °C).
+- pH effects are simplified to the first pKa.
+- Detector response is wavelength-matched UV only; no absolute quantitation.
+- Pressure is an estimate for trend/safety awareness, not a guarantee.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Develop
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Build
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+## Tech stack
+
+- React, TypeScript, Vite
+- Zustand for state
+- D3 for charts
+- Tailwind classes for styling
