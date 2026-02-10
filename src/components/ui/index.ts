@@ -21,3 +21,6 @@ export type { TableProps, TableColumn } from "./Table";
 
 export { SplashScreen } from "./SplashScreen";
 export type { SplashScreenProps } from "./SplashScreen";
+
+export { Modal } from "./Modal";
+export type { ModalProps } from "./Modal";

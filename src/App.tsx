@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { HiChartBar } from "react-icons/hi";
+import { FaPlay, FaFlask, FaCog, FaSave } from "react-icons/fa";
 import { useHPLCStore } from "~/store/hplcStore";
 import { simulateChromatogram } from "~/utils/chromatography";
 import { PumpControl } from "~/components/hplc/PumpControl";
@@ -11,9 +12,9 @@ import { MethodManager } from "~/components/hplc/MethodManager";
 import { ChromatogramChart } from "~/components/chart/ChromatogramChart";
 import { Button, Tabs, Table, SplashScreen, type TabItem, type TableColumn } from "~/components/ui";
 import type { ChromatogramData, Peak } from "~/types/hplc";
-import { FaPlay } from "react-icons/fa";
 
 type ControlTab = "pump" | "column" | "detector" | "mobile";
+type MobilePage = "sample" | "settings" | "methods" | "result";
 
 const controlTabs: TabItem<ControlTab>[] = [
   { id: "pump", label: "Pump" },
@@ -40,6 +41,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<ControlTab>("pump");
   const [isLoading, setIsLoading] = useState(true);
   const [showContent, setShowContent] = useState(false);
+  const [mobilePage, setMobilePage] = useState<MobilePage>("sample");
 
   const handleRunSimulation = useCallback(() => {
     if (!sample || sample.components.length === 0) {
@@ -146,22 +148,13 @@ function App() {
                 High-Performance Liquid Chromatography Educational Simulator
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowControls(!showControls)}
-                className="hidden sm:inline-flex"
               >
                 {showControls ? "Hide" : "Show"} Controls
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowControls(!showControls)}
-                className="sm:hidden"
-              >
-                {showControls ? "Hide" : "Show"}
               </Button>
               <Button
                 onClick={handleRunSimulation}
@@ -177,8 +170,9 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-screen-2xl mx-auto px-3 sm:px-6 py-3 sm:py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-6">
+      <main className="max-w-screen-2xl mx-auto px-3 sm:px-6 py-3 sm:py-6 pb-20 sm:pb-6">
+        {/* Desktop Layout */}
+        <div className="hidden sm:grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-6">
           {/* Control Panel */}
           {showControls && (
             <div className="lg:col-span-4 space-y-3 sm:space-y-6">
@@ -280,6 +274,160 @@ function App() {
             </div>
           </div>
         </div>
+
+        {/* Mobile Layout */}
+        <div className="sm:hidden h-full">
+          {/* Sample Page */}
+          {mobilePage === "sample" && (
+            <div className="h-full">
+              <SampleSetup />
+            </div>
+          )}
+
+          {/* Settings Page */}
+          {mobilePage === "settings" && (
+            <div className="space-y-3">
+              {/* Tabbed Controls */}
+              <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+                <Tabs
+                  tabs={controlTabs}
+                  activeTab={activeTab}
+                  onChange={setActiveTab}
+                />
+                <div className="p-3">
+                  {activeTab === "pump" && <PumpControl />}
+                  {activeTab === "column" && <ColumnControl />}
+                  {activeTab === "detector" && <DetectorControl />}
+                  {activeTab === "mobile" && <MobilePhaseControl />}
+                </div>
+              </div>
+
+              {/* Run Time Control */}
+              <div className="p-3 bg-white rounded-lg shadow-md border border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Run Time: {runTime} minutes
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="60"
+                  step="5"
+                  value={runTime}
+                  onChange={(e) => updateRunTime(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>5 min</span>
+                  <span>30 min</span>
+                  <span>60 min</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Methods Page */}
+          {mobilePage === "methods" && (
+            <div>
+              <MethodManager />
+            </div>
+          )}
+
+          {/* Result Page */}
+          {mobilePage === "result" && (
+            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-3">
+              <div className="mb-3">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Chromatogram
+                </h2>
+                {sample && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Sample: {sample.components.length} compound(s) | 
+                    {detector.type} Detector @ {detector.wavelength} nm
+                  </p>
+                )}
+              </div>
+
+              {chromatogramData ? (
+                <>
+                  <div className="overflow-x-auto -mx-3 px-3">
+                    <ChromatogramChart
+                      data={chromatogramData}
+                      height={300}
+                      width={Math.max(window.innerWidth * 1.5, 600)}
+                    />
+                  </div>
+
+                  {/* Peak Table */}
+                  {chromatogramData.peaks.length > 0 && (
+                    <div className="mt-4">
+                      <h3 className="text-base font-semibold text-gray-800 mb-2">
+                        Peak Analysis
+                      </h3>
+                      <Table
+                        data={chromatogramData.peaks.map((peak, index) => ({ ...peak, index }))}
+                        columns={peakTableColumns}
+                        compact
+                        hover
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-64 text-gray-500">
+                  <div className="text-center px-4">
+                    <HiChartBar className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p className="text-base font-medium">No chromatogram data</p>
+                    <p className="text-xs mt-1">
+                      Select compounds and run simulation to see results
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+          <div className="grid grid-cols-4 h-16">
+            <button
+              onClick={() => setMobilePage("sample")}
+              className={`flex flex-col items-center justify-center gap-1 ${
+                mobilePage === "sample" ? "text-blue-600" : "text-gray-600"
+              }`}
+            >
+              <FaFlask size={20} />
+              <span className="text-xs font-medium">Sample</span>
+            </button>
+            <button
+              onClick={() => setMobilePage("settings")}
+              className={`flex flex-col items-center justify-center gap-1 ${
+                mobilePage === "settings" ? "text-blue-600" : "text-gray-600"
+              }`}
+            >
+              <FaCog size={20} />
+              <span className="text-xs font-medium">Settings</span>
+            </button>
+            <button
+              onClick={() => setMobilePage("methods")}
+              className={`flex flex-col items-center justify-center gap-1 ${
+                mobilePage === "methods" ? "text-blue-600" : "text-gray-600"
+              }`}
+            >
+              <FaSave size={20} />
+              <span className="text-xs font-medium">Methods</span>
+            </button>
+            <button
+              onClick={() => setMobilePage("result")}
+              className={`flex flex-col items-center justify-center gap-1 ${
+                mobilePage === "result" ? "text-blue-600" : "text-gray-600"
+              }`}
+            >
+              <HiChartBar size={20} />
+              <span className="text-xs font-medium">Result</span>
+            </button>
+          </div>
+        </nav>
       </main>
     </div>
     </>
