@@ -1,16 +1,18 @@
 import React, { useState } from "react";
 import { useHPLCStore } from "~/store/hplcStore";
 import { compoundLibrary } from "~/data/compounds";
-import { Button } from "~/components/ui";
+import { Button, InputNumber } from "~/components/ui";
 import type { SampleComponent } from "~/types/hplc";
 
 export const SampleSetup: React.FC = () => {
   const { sample, updateSample } = useHPLCStore();
   const [selectedCompoundIds, setSelectedCompoundIds] = useState<Set<string>>(
-    new Set(sample?.components.map((c) => c.compound.id) || [])
+    new Set(sample?.components.map((c) => c.compound.id) || []),
   );
   const [concentrations, setConcentrations] = useState<Map<string, number>>(
-    new Map(sample?.components.map((c) => [c.compound.id, c.concentration]) || [])
+    new Map(
+      sample?.components.map((c) => [c.compound.id, c.concentration]) || [],
+    ),
   );
 
   const toggleCompound = (compoundId: string) => {
@@ -39,7 +41,7 @@ export const SampleSetup: React.FC = () => {
           compound,
           concentration: concentrations.get(id) || 1.0,
         };
-      }
+      },
     );
 
     updateSample({
@@ -50,14 +52,21 @@ export const SampleSetup: React.FC = () => {
   };
 
   const categories = Array.from(
-    new Set(compoundLibrary.map((c) => c.category))
+    new Set(compoundLibrary.map((c) => c.category)),
   );
 
   return (
     <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 bg-white rounded-lg shadow-md border border-gray-200">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-800">Sample Composition</h3>
-        <Button size="sm" onClick={applySample} disabled={selectedCompoundIds.size === 0} className="w-full sm:w-auto">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-800">
+          Sample Composition
+        </h3>
+        <Button
+          size="sm"
+          onClick={applySample}
+          disabled={selectedCompoundIds.size === 0}
+          className="w-full sm:w-auto"
+        >
           Apply Sample
         </Button>
       </div>
@@ -72,20 +81,36 @@ export const SampleSetup: React.FC = () => {
               const compound = compoundLibrary.find((c) => c.id === id);
               if (!compound) return null;
               return (
-                <div key={id} className="flex items-center gap-2 text-xs sm:text-sm">
-                  <span className="flex-1 text-gray-700 truncate" title={compound.name}>{compound.name}</span>
-                  <input
-                    type="number"
-                    value={concentrations.get(id) || 1.0}
-                    onChange={(e) =>
-                      updateConcentration(id, parseFloat(e.target.value) || 1.0)
-                    }
-                    min={0.1}
-                    max={100}
-                    step={0.1}
-                    className="w-16 sm:w-20 px-1 sm:px-2 py-1 border border-gray-300 rounded text-xs sm:text-sm"
-                  />
-                  <span className="text-gray-500 text-xs whitespace-nowrap">mg/mL</span>
+                <div
+                  key={id}
+                  className="flex items-center justify-between gap-2 text-xs sm:text-sm"
+                >
+                  <span
+                    className="flex-1 text-gray-700 truncate"
+                    title={compound.name}
+                  >
+                    {compound.name}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <InputNumber
+                      value={concentrations.get(id) || 1.0}
+                      onChange={(e) =>
+                        updateConcentration(
+                          id,
+                          parseFloat(e.target.value) || 1.0,
+                        )
+                      }
+                      min={0.1}
+                      max={100}
+                      allowDecimal
+                      allowNegative={false}
+                      size="xs"
+                      className="w-16 sm:w-20"
+                    />
+                    <span className="text-gray-500 text-xs whitespace-nowrap">
+                      mg/mL
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -95,7 +120,9 @@ export const SampleSetup: React.FC = () => {
 
       <div className="space-y-3 max-h-64 sm:max-h-96 overflow-y-auto">
         {categories.map((category) => {
-          const compounds = compoundLibrary.filter((c) => c.category === category);
+          const compounds = compoundLibrary.filter(
+            (c) => c.category === category,
+          );
           return (
             <div key={category}>
               <div className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 capitalize">
@@ -119,7 +146,10 @@ export const SampleSetup: React.FC = () => {
                       </div>
                       <div className="text-xs text-gray-500 truncate">
                         MW: {compound.molecularWeight} | LogP: {compound.logP} |
-                        pKa: {compound.pKa.length > 0 ? compound.pKa.join(", ") : "N/A"}
+                        pKa:{" "}
+                        {compound.pKa.length > 0
+                          ? compound.pKa.join(", ")
+                          : "N/A"}
                       </div>
                     </div>
                   </label>
