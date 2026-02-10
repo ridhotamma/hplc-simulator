@@ -32,7 +32,7 @@ export const MobilePhaseControl: React.FC = () => {
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      <div className="p-3 sm:p-4 bg-white rounded-lg shadow-md border border-gray-200">
+      <div className=" border-gray-200">
         <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3">Mobile Phase</h3>
         
         {/* Mode Selection */}

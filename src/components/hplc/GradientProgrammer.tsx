@@ -125,21 +125,21 @@ export const GradientProgrammer: React.FC = () => {
       {/* Presets */}
       <div className="flex flex-wrap gap-2">
         <Button
-          size="sm"
+          size="xs"
           variant="outline"
           onClick={() => createPreset("linear")}
         >
           Linear
         </Button>
         <Button
-          size="sm"
+          size="xs"
           variant="outline"
           onClick={() => createPreset("fast")}
         >
           Fast
         </Button>
         <Button
-          size="sm"
+          size="xs"
           variant="outline"
           onClick={() => createPreset("shallow")}
         >
@@ -181,7 +181,7 @@ export const GradientProgrammer: React.FC = () => {
       )}
 
       {/* Add Step Form */}
-      <div className="space-y-3 p-3 bg-gray-50 rounded border border-gray-200">
+      <div className="space-y-3">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <InputNumber
             label="Time (min)"

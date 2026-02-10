@@ -23,7 +23,7 @@ export const ChromatogramChart: React.FC<ChromatogramChartProps> = ({
 
   // Handle responsive width
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || width) return;
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -33,7 +33,7 @@ export const ChromatogramChart: React.FC<ChromatogramChartProps> = ({
 
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [width]);
 
   useEffect(() => {
     if (!svgRef.current || !data || data.time.length === 0) return;
@@ -213,7 +213,7 @@ export const ChromatogramChart: React.FC<ChromatogramChartProps> = ({
   }, [data, width, containerWidth, height]);
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", className)}>
+    <div ref={containerRef} className={cn("relative w-full", width && "min-w-fit", className)} style={width ? { width: `${width}px` } : undefined}>
       <svg ref={svgRef} className="border border-gray-200 rounded-lg bg-white" />
       
       {/* Peak info tooltip */}

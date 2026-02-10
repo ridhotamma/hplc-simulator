@@ -243,10 +243,13 @@ function App() {
 
               {chromatogramData ? (
                 <>
-                  <ChromatogramChart
-                    data={chromatogramData}
-                    height={window.innerWidth < 640 ? 300 : 500}
-                  />
+                  <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+                    <ChromatogramChart
+                      data={chromatogramData}
+                      height={window.innerWidth < 640 ? 300 : 500}
+                      width={window.innerWidth < 640 ? Math.max(window.innerWidth * 1.5, 600) : undefined}
+                    />
+                  </div>
 
                   {/* Peak Table */}
                   {chromatogramData.peaks.length > 0 && (
