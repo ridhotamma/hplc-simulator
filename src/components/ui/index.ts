@@ -18,3 +18,6 @@ export type { SliderProps } from "./Slider";
 
 export { Table } from "./Table";
 export type { TableProps, TableColumn } from "./Table";
+
+export { SplashScreen } from "./SplashScreen";
+export type { SplashScreenProps } from "./SplashScreen";

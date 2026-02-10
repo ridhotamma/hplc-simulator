@@ -9,8 +9,9 @@ import { MobilePhaseControl } from "~/components/hplc/MobilePhaseControl";
 import { SampleSetup } from "~/components/hplc/SampleSetup";
 import { MethodManager } from "~/components/hplc/MethodManager";
 import { ChromatogramChart } from "~/components/chart/ChromatogramChart";
-import { Button, Tabs, Table, type TabItem, type TableColumn } from "~/components/ui";
+import { Button, Tabs, Table, SplashScreen, type TabItem, type TableColumn } from "~/components/ui";
 import type { ChromatogramData, Peak } from "~/types/hplc";
+import { FaPlay } from "react-icons/fa";
 
 type ControlTab = "pump" | "column" | "detector" | "mobile";
 
@@ -37,6 +38,8 @@ function App() {
   const [chromatogramData, setChromatogramData] = useState<ChromatogramData | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [activeTab, setActiveTab] = useState<ControlTab>("pump");
+  const [isLoading, setIsLoading] = useState(true);
+  const [showContent, setShowContent] = useState(false);
 
   const handleRunSimulation = useCallback(() => {
     if (!sample || sample.components.length === 0) {
@@ -117,7 +120,20 @@ function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-gray-100">
+    <>
+      {isLoading && (
+        <SplashScreen
+          onLoadingComplete={() => {
+            setIsLoading(false);
+            setTimeout(() => setShowContent(true), 50);
+          }}
+        />
+      )}
+      <div
+        className={`min-h-screen bg-linear-to-br from-blue-50 to-gray-100 transition-opacity duration-700 ${
+          showContent ? "opacity-100" : "opacity-0"
+        }`}
+      >
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-screen-2xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
@@ -152,6 +168,7 @@ function App() {
                 disabled={isRunning || !sample}
                 size="sm"
               >
+                <FaPlay size={10} className="mr-2"/>
                 {isRunning ? "Running..." : "Run"}
               </Button>
             </div>
@@ -262,6 +279,7 @@ function App() {
         </div>
       </main>
     </div>
+    </>
   );
 }
 
