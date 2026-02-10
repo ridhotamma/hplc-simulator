@@ -74,6 +74,10 @@ const defaultDetector: DetectorSettings = {
   bandwidth: 4,
   samplingRate: 10,
   noiseLevel: 0.5,
+  wavelengthRange: { start: 190, end: 800 },
+  excitationWavelength: 280,
+  emissionWavelength: 350,
+  massRange: { start: 50, end: 2000 },
 };
 
 const defaultMobilePhase: MobilePhase = {
@@ -82,6 +86,10 @@ const defaultMobilePhase: MobilePhase = {
   percentB: 50,
   pH: 7,
   flowRate: 1.0,
+  mode: "isocratic",
+  gradientSteps: [],
+  gradientDelayVolume: 1.0,
+  reEquilibrationTime: 5,
 };
 
 export const useHPLCStore = create<HPLCStore>()(

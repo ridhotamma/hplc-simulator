@@ -8,6 +8,66 @@ import type {
 } from "~/types/hplc";
 
 /**
+ * Calculate mobile phase composition at a given time for gradient elution
+ * Returns the % B at the specified time
+ */
+export function calculateGradientComposition(
+  mobilePhase: MobilePhase,
+  time: number
+): number {
+  if (mobilePhase.mode === "isocratic" || !mobilePhase.gradientSteps || mobilePhase.gradientSteps.length === 0) {
+    return mobilePhase.percentB;
+  }
+
+  const steps = mobilePhase.gradientSteps;
+  
+  // Account for gradient delay volume
+  const delayTime = mobilePhase.gradientDelayVolume
+    ? mobilePhase.gradientDelayVolume / mobilePhase.flowRate
+    : 0;
+  const adjustedTime = time - delayTime;
+  
+  if (adjustedTime <= 0) {
+    return mobilePhase.percentB; // Initial composition during delay
+  }
+
+  // Find the relevant gradient segment
+  let prevPercentB = mobilePhase.percentB;
+  let prevTime = 0;
+  
+  for (let i = 0; i < steps.length; i++) {
+    const currentStep = steps[i];
+    
+    if (adjustedTime <= currentStep.time) {
+      // Interpolate between previous and current step
+      if (currentStep.type === "step") {
+        // Step change - return previous value until exactly at step time
+        return adjustedTime < currentStep.time ? prevPercentB : currentStep.percentB;
+      } else if (currentStep.type === "linear") {
+        // Linear interpolation
+        const timeDiff = currentStep.time - prevTime;
+        const percentDiff = currentStep.percentB - prevPercentB;
+        const fraction = (adjustedTime - prevTime) / timeDiff;
+        return prevPercentB + fraction * percentDiff;
+      } else if (currentStep.type === "curve") {
+        // Curved gradient (simplified as exponential)
+        const timeDiff = currentStep.time - prevTime;
+        const percentDiff = currentStep.percentB - prevPercentB;
+        const fraction = (adjustedTime - prevTime) / timeDiff;
+        const curvedFraction = Math.pow(fraction, 1.5); // Exponential curve
+        return prevPercentB + curvedFraction * percentDiff;
+      }
+    }
+    
+    prevPercentB = currentStep.percentB;
+    prevTime = currentStep.time;
+  }
+  
+  // After last step, maintain final composition
+  return prevPercentB;
+}
+
+/**
  * Calculate dead volume (void volume) of the column
  * V0 = π * r² * L * ε
  * where ε is the interparticle porosity (~0.4 for packed columns)
@@ -113,6 +173,8 @@ export function calculateResolution(
  * Predict retention time based on compound properties
  * Simplified LSS (Linear Solvent Strength) model for reversed-phase
  * log k' = log k'w - S * φ
+ * 
+ * For gradient elution, uses simplified gradient retention equation
  */
 export function predictRetentionTime(
   compound: Compound,
@@ -123,30 +185,67 @@ export function predictRetentionTime(
   // Base retention (log k'w) correlates with hydrophobicity (logP)
   const logKw = 0.5 * compound.logP + 0.5;
   
-  // Solvent strength parameter (φ is organic modifier fraction)
-  const phi = mobilePhase.percentB / 100;
+  // Solvent strength parameter
   const S = 4.0; // Typical S value for small molecules
-  
-  // Calculate retention factor
-  const logK = logKw - S * phi;
-  const k = Math.pow(10, logK);
-  
-  // Retention time: tR = t0 * (1 + k')
-  let retentionTime = deadTime * (1 + k);
-  
-  // pH effect on ionizable compounds
-  if (compound.pKa.length > 0) {
-    const pKa = compound.pKa[0];
-    const pH = mobilePhase.pH;
-    const ionizationFactor = 1 / (1 + Math.pow(10, pKa - pH));
-    retentionTime *= (1 - 0.5 * ionizationFactor); // Ionized form elutes faster
-  }
   
   // Temperature effect (higher T = faster elution)
   const tempFactor = 1 - (column.temperature - 25) * 0.02;
-  retentionTime *= Math.max(0.5, tempFactor);
   
-  return Number(retentionTime.toFixed(3));
+  if (mobilePhase.mode === "gradient" && mobilePhase.gradientSteps && mobilePhase.gradientSteps.length > 0) {
+    // Gradient elution - simplified gradient retention equation
+    const initialPercent = mobilePhase.percentB / 100;
+    const steps = mobilePhase.gradientSteps;
+    const lastStep = steps[steps.length - 1];
+    const finalPercent = lastStep.percentB / 100;
+    const gradientTime = lastStep.time;
+    
+    // Average gradient slope
+    const b = (finalPercent - initialPercent) / gradientTime;
+    
+    // Simplified gradient retention equation
+    // tR ≈ (1/b) * ln(2.3 * k'w * S * b + 1) + t0
+    const k_initial = Math.pow(10, logKw - S * initialPercent);
+    const tG = b > 0 ? (1 / b) * Math.log(2.3 * k_initial * S * b + 1) : 0;
+    
+    // Account for gradient delay
+    const delayTime = mobilePhase.gradientDelayVolume
+      ? mobilePhase.gradientDelayVolume / mobilePhase.flowRate
+      : 0;
+    
+    let retentionTime = deadTime + tG + delayTime;
+    
+    // pH effect on ionizable compounds
+    if (compound.pKa.length > 0) {
+      const pKa = compound.pKa[0];
+      const pH = mobilePhase.pH;
+      const ionizationFactor = 1 / (1 + Math.pow(10, pKa - pH));
+      retentionTime *= (1 - 0.3 * ionizationFactor); // Ionized form elutes faster
+    }
+    
+    retentionTime *= Math.max(0.5, tempFactor);
+    return Number(retentionTime.toFixed(3));
+  } else {
+    // Isocratic elution
+    const phi = mobilePhase.percentB / 100;
+    
+    // Calculate retention factor
+    const logK = logKw - S * phi;
+    const k = Math.pow(10, logK);
+    
+    // Retention time: tR = t0 * (1 + k')
+    let retentionTime = deadTime * (1 + k);
+    
+    // pH effect on ionizable compounds
+    if (compound.pKa.length > 0) {
+      const pKa = compound.pKa[0];
+      const pH = mobilePhase.pH;
+      const ionizationFactor = 1 / (1 + Math.pow(10, pKa - pH));
+      retentionTime *= (1 - 0.5 * ionizationFactor); // Ionized form elutes faster
+    }
+    
+    retentionTime *= Math.max(0.5, tempFactor);
+    return Number(retentionTime.toFixed(3));
+  }
 }
 
 /**

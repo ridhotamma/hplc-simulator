@@ -45,14 +45,34 @@ export interface DetectorSettings {
   bandwidth: number; // nm
   samplingRate: number; // Hz
   noiseLevel: number; // Arbitrary units
+  // PDA specific
+  wavelengthRange?: { start: number; end: number };
+  // Fluorescence specific
+  excitationWavelength?: number;
+  emissionWavelength?: number;
+  // MS specific
+  massRange?: { start: number; end: number };
+}
+
+export type GradientStepType = "linear" | "step" | "curve";
+
+export interface GradientStep {
+  time: number; // minutes
+  percentB: number; // 0 - 100
+  flowRate?: number; // mL/min (optional, if different from initial)
+  type: GradientStepType;
 }
 
 export interface MobilePhase {
   solventA: SolventType;
   solventB?: SolventType;
-  percentB: number; // 0 - 100 for isocratic
+  percentB: number; // 0 - 100 for isocratic (initial % for gradient)
   pH: number; // 2 - 12
   flowRate: number; // mL/min
+  mode: "isocratic" | "gradient";
+  gradientSteps?: GradientStep[]; // For gradient mode
+  gradientDelayVolume?: number; // mL (system dead volume)
+  reEquilibrationTime?: number; // minutes
 }
 
 export interface Compound {
