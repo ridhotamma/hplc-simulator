@@ -19,13 +19,13 @@ export function Tabs<T extends string>({
   className,
 }: TabsProps<T>) {
   return (
-    <div className={cn("flex border-b border-gray-200", className)}>
+    <div className={cn("flex border-b border-gray-200 overflow-x-auto", className)}>
       {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => onChange(tab.id)}
           className={cn(
-            "flex-1 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap",
+            "flex-1 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap",
             activeTab === tab.id
               ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600"
               : "text-gray-600 hover:bg-gray-50"

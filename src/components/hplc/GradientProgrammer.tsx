@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useHPLCStore } from "~/store/hplcStore";
-import { Button, InputNumber } from "~/components/ui";
+import { Button, InputNumber, Select, Table, type TableColumn } from "~/components/ui";
 import type { GradientStep, GradientStepType } from "~/types/hplc";
 
 export const GradientProgrammer: React.FC = () => {
@@ -77,79 +77,119 @@ export const GradientProgrammer: React.FC = () => {
     });
   };
 
+  const tableColumns: TableColumn<GradientStep & { index: number }>[] = [
+    {
+      key: "time",
+      header: "Time (min)",
+      render: (item) => item.time.toFixed(1),
+      className: "whitespace-nowrap",
+    },
+    {
+      key: "percentB",
+      header: "% B",
+      render: (item) => item.percentB.toFixed(1),
+    },
+    {
+      key: "type",
+      header: "Type",
+      render: (item) => <span className="capitalize">{item.type}</span>,
+    },
+    {
+      key: "action",
+      header: "Action",
+      render: (item) => (
+        <Button
+          size="xs"
+          variant="destructive"
+          onClick={() => removeStep(item.index)}
+        >
+          Remove
+        </Button>
+      ),
+    },
+  ];
+
+  const tableData = steps.map((step, index) => ({ ...step, index }));
+
   return (
-    <div className="space-y-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
+    <div className="space-y-4 p-4 bg-white rounded-lg shadow border border-gray-200">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800">Gradient Programming</h3>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => createPreset("linear")}
-          >
-            Linear
+        <h3 className="text-lg font-semibold text-gray-900">Gradient Programming</h3>
+        {steps.length > 0 && (
+          <Button onClick={clearAll} size="xs" variant="outline">
+            Clear All
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => createPreset("fast")}
-          >
-            Fast
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => createPreset("shallow")}
-          >
-            Shallow
-          </Button>
-        </div>
+        )}
       </div>
 
-      {/* Gradient Steps Table */}
+      {/* Presets */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => createPreset("linear")}
+        >
+          Linear
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => createPreset("fast")}
+        >
+          Fast
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => createPreset("shallow")}
+        >
+          Shallow
+        </Button>
+      </div>
+
+      {/* Gradient Profile */}
       {steps.length > 0 && (
-        <div className="border border-gray-200 rounded-md overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">Time (min)</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">% B</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">Type</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {steps.map((step, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-3 py-2">{step.time.toFixed(1)}</td>
-                  <td className="px-3 py-2">{step.percentB.toFixed(1)}</td>
-                  <td className="px-3 py-2 capitalize">{step.type}</td>
-                  <td className="px-3 py-2">
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => removeStep(index)}
-                    >
-                      Remove
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="bg-gray-50 rounded border border-gray-200 p-3">
+          <div className="h-32 relative">
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <polyline
+                points={generateGradientProfile(mobilePhase.percentB, steps)}
+                fill="none"
+                stroke="#3b82f6"
+                strokeWidth="1"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+          </div>
+          <div className="flex justify-between text-xs text-gray-600 mt-1">
+            <span>0 min</span>
+            <span>{Math.max(...steps.map(s => s.time)).toFixed(1)} min</span>
+          </div>
         </div>
       )}
 
-      {/* Add New Step */}
-      <div className="p-3 bg-gray-50 rounded-md space-y-3">
-        <h4 className="text-sm font-medium text-gray-700">Add Gradient Step</h4>
-        <div className="grid grid-cols-3 gap-3">
+      {/* Steps Table */}
+      {steps.length > 0 && (
+        <div className="overflow-x-auto">
+          <Table
+            data={tableData}
+            columns={tableColumns}
+            compact
+          />
+        </div>
+      )}
+
+      {/* Add Step Form */}
+      <div className="space-y-3 p-3 bg-gray-50 rounded border border-gray-200">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <InputNumber
             label="Time (min)"
             value={newStep.time ?? 0}
             onChange={(e) => setNewStep({ ...newStep, time: parseFloat(e.target.value) || 0 })}
             allowDecimal
             allowNegative={false}
+            size="sm"
           />
           <InputNumber
             label="% B"
@@ -157,81 +197,59 @@ export const GradientProgrammer: React.FC = () => {
             onChange={(e) => setNewStep({ ...newStep, percentB: parseFloat(e.target.value) || 50 })}
             allowDecimal
             allowNegative={false}
+            size="sm"
           />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Type
-            </label>
-            <select
-              value={newStep.type || "linear"}
-              onChange={(e) => setNewStep({ ...newStep, type: e.target.value as GradientStepType })}
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-              <option value="linear">Linear</option>
-              <option value="step">Step</option>
-              <option value="curve">Curve</option>
-            </select>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={addStep} size="sm">
-            Add Step
-          </Button>
-          {steps.length > 0 && (
-            <Button onClick={clearAll} size="sm" variant="destructive">
-              Clear All
+          <Select
+            label="Type"
+            value={newStep.type || "linear"}
+            onChange={(e) => setNewStep({ ...newStep, type: e.target.value as GradientStepType })}
+            options={[
+              { value: "linear", label: "Linear" },
+              { value: "step", label: "Step" },
+              { value: "curve", label: "Curve" },
+            ]}
+            size="sm"
+          />
+          <div className="flex items-end">
+            <Button onClick={addStep} size="sm" className="w-full">
+              Add
             </Button>
-          )}
+          </div>
         </div>
       </div>
 
       {/* System Parameters */}
-      <div className="grid grid-cols-2 gap-4">
-        <InputNumber
-          label="Gradient Delay Volume (mL)"
-          value={mobilePhase.gradientDelayVolume ?? 1.0}
-          onChange={(e) =>
-            updateMobilePhase({
-              ...mobilePhase,
-              gradientDelayVolume: parseFloat(e.target.value) || 1.0,
-            })
-          }
-          helperText="System dead volume before column"
-          allowDecimal
-          allowNegative={false}
-        />
-        <InputNumber
-          label="Re-equilibration Time (min)"
-          value={mobilePhase.reEquilibrationTime ?? 5}
-          onChange={(e) =>
-            updateMobilePhase({
-              ...mobilePhase,
-              reEquilibrationTime: parseFloat(e.target.value) || 5,
-            })
-          }
-          helperText="Time to re-equilibrate column"
-          allowDecimal
-          allowNegative={false}
-        />
-      </div>
-
-      {/* Gradient Profile Visualization */}
-      {steps.length > 0 && (
-        <div className="mt-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Gradient Profile Preview</h4>
-          <div className="h-32 bg-linear-to-r from-blue-100 to-blue-600 rounded-md relative overflow-hidden">
-            <svg className="w-full h-full">
-              <polyline
-                points={generateGradientProfile(mobilePhase.percentB, steps)}
-                fill="none"
-                stroke="white"
-                strokeWidth="3"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+      <details className="group">
+        <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+          System Parameters
+        </summary>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+          <InputNumber
+            label="Delay Volume (mL)"
+            value={mobilePhase.gradientDelayVolume ?? 1.0}
+            onChange={(e) =>
+              updateMobilePhase({
+                ...mobilePhase,
+                gradientDelayVolume: parseFloat(e.target.value) || 1.0,
+              })
+            }
+            allowDecimal
+            allowNegative={false}
+          />
+          <InputNumber
+            label="Re-equilibration (min)"
+            value={mobilePhase.reEquilibrationTime ?? 5}
+            onChange={(e) =>
+              updateMobilePhase({
+                ...mobilePhase,
+                reEquilibrationTime: parseFloat(e.target.value) || 5,
+              })
+            }
+            allowDecimal
+            allowNegative={false}
+          />
         </div>
-      )}
+      </details>
     </div>
   );
 };

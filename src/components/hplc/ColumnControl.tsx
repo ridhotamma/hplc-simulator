@@ -10,9 +10,7 @@ export const ColumnControl: React.FC = () => {
   const { column, updateColumn } = useHPLCStore();
 
   return (
-    <div className="space-y-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-800 mb-3">Column Settings</h3>
-      
+    <div className="space-y-3 sm:space-y-4">
       <InputNumber
         label="Length (mm)"
         value={column.length}

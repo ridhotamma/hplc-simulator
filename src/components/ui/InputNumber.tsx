@@ -2,12 +2,13 @@ import React from "react";
 import { cn } from "~/lib/utils";
 
 export interface InputNumberProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "size"> {
   label?: string;
   error?: string;
   helperText?: string;
   allowDecimal?: boolean;
   allowNegative?: boolean;
+  size?: "xs" | "sm" | "md" | "lg";
 }
 
 export const InputNumber = React.forwardRef<HTMLInputElement, InputNumberProps>(
@@ -20,15 +21,36 @@ export const InputNumber = React.forwardRef<HTMLInputElement, InputNumberProps>(
       id,
       allowDecimal = true,
       allowNegative = true,
+      size = "md",
+      value,
+      onChange,
+      onBlur,
+      min,
+      max,
       ...props
     },
     ref
   ) => {
     const generatedId = React.useId();
     const inputId = id || generatedId;
+    const [internalValue, setInternalValue] = React.useState<string>(
+      value?.toString() ?? ""
+    );
+
+    // Sync internal value when external value changes
+    React.useEffect(() => {
+      setInternalValue(value?.toString() ?? "");
+    }, [value]);
 
     const baseStyles =
-      "flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+      "flex w-full rounded-md border border-gray-300 bg-white ring-offset-white file:border-0 file:bg-transparent file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
+    const sizes = {
+      xs: "h-6 px-2 text-xs",
+      sm: "h-8 px-3 text-sm",
+      md: "h-10 px-3 text-sm",
+      lg: "h-12 px-4 text-base",
+    };
 
     const errorStyles = error
       ? "border-red-500 focus-visible:ring-red-500"
@@ -73,6 +95,74 @@ export const InputNumber = React.forwardRef<HTMLInputElement, InputNumberProps>(
       }
     };
 
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      setInternalValue(newValue);
+      
+      // Call parent onChange to update state immediately
+      if (onChange) {
+        onChange(e);
+      }
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      let finalValue = internalValue.trim();
+
+      // If empty or invalid, use previous value or min/max/0
+      if (finalValue === "" || finalValue === "-" || finalValue === ".") {
+        if (min !== undefined) {
+          finalValue = min.toString();
+        } else if (!allowNegative) {
+          finalValue = "0";
+        } else {
+          finalValue = value?.toString() ?? "0";
+        }
+      } else {
+        const numValue = parseFloat(finalValue);
+        
+        // Validate against min/max
+        if (!isNaN(numValue)) {
+          let validatedValue = numValue;
+          
+          const minNum = min !== undefined ? Number(min) : undefined;
+          const maxNum = max !== undefined ? Number(max) : undefined;
+          
+          if (minNum !== undefined && validatedValue < minNum) {
+            validatedValue = minNum;
+          }
+          if (maxNum !== undefined && validatedValue > maxNum) {
+            validatedValue = maxNum;
+          }
+          
+          finalValue = validatedValue.toString();
+        }
+      }
+
+      setInternalValue(finalValue);
+
+      // Create synthetic event with corrected value
+      const syntheticEvent = {
+        ...e,
+        target: {
+          ...e.target,
+          value: finalValue,
+        },
+      } as React.FocusEvent<HTMLInputElement>;
+
+      // Call parent onChange with validated value
+      if (onChange) {
+        const changeEvent = {
+          target: { value: finalValue },
+        } as React.ChangeEvent<HTMLInputElement>;
+        onChange(changeEvent);
+      }
+
+      // Call parent onBlur
+      if (onBlur) {
+        onBlur(syntheticEvent);
+      }
+    };
+
     return (
       <div className="w-full">
         {label && (
@@ -88,8 +178,11 @@ export const InputNumber = React.forwardRef<HTMLInputElement, InputNumberProps>(
           id={inputId}
           type="text"
           inputMode="decimal"
+          value={internalValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className={cn(baseStyles, errorStyles, className)}
+          className={cn(baseStyles, sizes[size], errorStyles, className)}
           {...props}
         />
         {error && <p className="mt-1.5 text-sm text-red-600">{error}</p>}

@@ -54,17 +54,17 @@ export const SampleSetup: React.FC = () => {
   );
 
   return (
-    <div className="space-y-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800">Sample Composition</h3>
-        <Button size="sm" onClick={applySample} disabled={selectedCompoundIds.size === 0}>
+    <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 bg-white rounded-lg shadow-md border border-gray-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-800">Sample Composition</h3>
+        <Button size="sm" onClick={applySample} disabled={selectedCompoundIds.size === 0} className="w-full sm:w-auto">
           Apply Sample
         </Button>
       </div>
 
       {selectedCompoundIds.size > 0 && (
-        <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
-          <div className="text-sm font-medium text-blue-900 mb-2">
+        <div className="bg-blue-50 p-2 sm:p-3 rounded-md border border-blue-200">
+          <div className="text-xs sm:text-sm font-medium text-blue-900 mb-2">
             Selected: {selectedCompoundIds.size} compound(s)
           </div>
           <div className="space-y-2">
@@ -72,8 +72,8 @@ export const SampleSetup: React.FC = () => {
               const compound = compoundLibrary.find((c) => c.id === id);
               if (!compound) return null;
               return (
-                <div key={id} className="flex items-center gap-2 text-sm">
-                  <span className="flex-1 text-gray-700">{compound.name}</span>
+                <div key={id} className="flex items-center gap-2 text-xs sm:text-sm">
+                  <span className="flex-1 text-gray-700 truncate" title={compound.name}>{compound.name}</span>
                   <input
                     type="number"
                     value={concentrations.get(id) || 1.0}
@@ -83,9 +83,9 @@ export const SampleSetup: React.FC = () => {
                     min={0.1}
                     max={100}
                     step={0.1}
-                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                    className="w-16 sm:w-20 px-1 sm:px-2 py-1 border border-gray-300 rounded text-xs sm:text-sm"
                   />
-                  <span className="text-gray-500">mg/mL</span>
+                  <span className="text-gray-500 text-xs whitespace-nowrap">mg/mL</span>
                 </div>
               );
             })}
@@ -93,31 +93,31 @@ export const SampleSetup: React.FC = () => {
         </div>
       )}
 
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+      <div className="space-y-3 max-h-64 sm:max-h-96 overflow-y-auto">
         {categories.map((category) => {
           const compounds = compoundLibrary.filter((c) => c.category === category);
           return (
             <div key={category}>
-              <div className="text-sm font-semibold text-gray-700 mb-2 capitalize">
+              <div className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 capitalize">
                 {category}
               </div>
               <div className="space-y-1">
                 {compounds.map((compound) => (
                   <label
                     key={compound.id}
-                    className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                    className="flex items-start gap-2 sm:gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer active:bg-gray-100"
                   >
                     <input
                       type="checkbox"
                       checked={selectedCompoundIds.has(compound.id)}
                       onChange={() => toggleCompound(compound.id)}
-                      className="mt-1 w-4 h-4 accent-blue-600"
+                      className="mt-0.5 sm:mt-1 w-4 h-4 accent-blue-600 shrink-0"
                     />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-800">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs sm:text-sm font-medium text-gray-800 truncate">
                         {compound.name}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 truncate">
                         MW: {compound.molecularWeight} | LogP: {compound.logP} |
                         pKa: {compound.pKa.length > 0 ? compound.pKa.join(", ") : "N/A"}
                       </div>

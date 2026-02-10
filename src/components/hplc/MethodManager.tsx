@@ -18,9 +18,9 @@ export const MethodManager: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800">Saved Methods</h3>
+    <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 bg-white rounded-lg shadow-md border border-gray-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-800">Saved Methods</h3>
         <Button size="sm" onClick={() => setShowSaveDialog(true)}>
           Save Current
         </Button>

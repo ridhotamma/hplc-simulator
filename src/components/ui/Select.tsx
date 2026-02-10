@@ -1,21 +1,39 @@
 import React from "react";
 import { cn } from "~/lib/utils";
 
-export interface InputTextProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+export interface SelectProps
+  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> {
   label?: string;
   error?: string;
   helperText?: string;
+  options: SelectOption[];
   size?: "xs" | "sm" | "md" | "lg";
 }
 
-export const InputText = React.forwardRef<HTMLInputElement, InputTextProps>(
-  ({ className, label, error, helperText, id, size = "md", ...props }, ref) => {
+export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
+  (
+    {
+      className,
+      label,
+      error,
+      helperText,
+      id,
+      options,
+      size = "md",
+      ...props
+    },
+    ref
+  ) => {
     const generatedId = React.useId();
     const inputId = id || generatedId;
 
     const baseStyles =
-      "flex w-full rounded-md border border-gray-300 bg-white ring-offset-white file:border-0 file:bg-transparent file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+      "flex w-full rounded-md border border-gray-300 bg-white ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
     const sizes = {
       xs: "h-6 px-2 text-xs",
@@ -38,16 +56,19 @@ export const InputText = React.forwardRef<HTMLInputElement, InputTextProps>(
             {label}
           </label>
         )}
-        <input
+        <select
           ref={ref}
           id={inputId}
-          type="text"
           className={cn(baseStyles, sizes[size], errorStyles, className)}
           {...props}
-        />
-        {error && (
-          <p className="mt-1.5 text-sm text-red-600">{error}</p>
-        )}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {error && <p className="mt-1.5 text-sm text-red-600">{error}</p>}
         {helperText && !error && (
           <p className="mt-1.5 text-sm text-gray-500">{helperText}</p>
         )}
@@ -56,4 +77,4 @@ export const InputText = React.forwardRef<HTMLInputElement, InputTextProps>(
   }
 );
 
-InputText.displayName = "InputText";
+Select.displayName = "Select";
