@@ -1,6 +1,9 @@
 import React, { useState } from "react";
+import { HiOutlineClipboardList } from "react-icons/hi";
+import { FaPlus } from "react-icons/fa";
 import { useHPLCStore } from "~/store/hplcStore";
 import { Button, InputText } from "~/components/ui";
+import { Modal } from "~/components/ui/Modal";
 
 export const MethodManager: React.FC = () => {
   const { savedMethods, saveMethod, loadMethod, deleteMethod } = useHPLCStore();
@@ -20,14 +23,31 @@ export const MethodManager: React.FC = () => {
   return (
     <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 bg-white rounded-lg shadow-md border border-gray-200">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-800">Saved Methods</h3>
-        <Button size="sm" onClick={() => setShowSaveDialog(true)}>
-          Save Current
-        </Button>
+        <div className="space-y-1">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800">
+            Saved Methods
+          </h3>
+          <p className="text-xs text-gray-600">
+            Store your sample calculation history to reuse later.
+          </p>
+        </div>
+        {savedMethods.length > 0 && (
+          <Button size="sm" onClick={() => setShowSaveDialog(true)}>
+            Save Current
+          </Button>
+        )}
       </div>
 
-      {showSaveDialog && (
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
+      <Modal
+        isOpen={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        title="Save Method"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Give this setup a name and optional description so you can reuse the calculation later.
+          </p>
           <InputText
             label="Method Name"
             value={methodName}
@@ -40,10 +60,7 @@ export const MethodManager: React.FC = () => {
             onChange={(e) => setMethodDescription(e.target.value)}
             placeholder="Brief description of the method"
           />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleSave}>
-              Save
-            </Button>
+          <div className="flex justify-end gap-2">
             <Button
               size="sm"
               variant="ghost"
@@ -51,15 +68,29 @@ export const MethodManager: React.FC = () => {
             >
               Cancel
             </Button>
+            <Button size="sm" onClick={handleSave}>
+              Save
+            </Button>
           </div>
         </div>
-      )}
+      </Modal>
 
       <div className="space-y-2 max-h-64 overflow-y-auto">
         {savedMethods.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-4">
-            No saved methods yet
-          </p>
+          <div className="text-center py-6 px-4 border border-dashed border-gray-200 rounded-lg bg-gray-50">
+            <div className="flex justify-center mb-3">
+              <HiOutlineClipboardList size={32} />
+            </div>
+            <p className="text-base font-medium text-gray-800">
+              No saved methods yet
+            </p>
+            <div className="mt-4">
+              <Button size="sm" onClick={() => setShowSaveDialog(true)}>
+                <FaPlus className="mr-2" />
+                Save Current Method
+              </Button>
+            </div>
+          </div>
         ) : (
           savedMethods.map((method) => (
             <div
@@ -89,9 +120,7 @@ export const MethodManager: React.FC = () => {
                   size="sm"
                   variant="destructive"
                   onClick={() => {
-                    if (
-                      confirm(`Delete method "${method.name}"?`)
-                    ) {
+                    if (confirm(`Delete method "${method.name}"?`)) {
                       deleteMethod(method.id);
                     }
                   }}
