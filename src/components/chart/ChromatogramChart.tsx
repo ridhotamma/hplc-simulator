@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import * as d3 from "d3";
 import { cn } from "~/lib/utils";
 import type { ChromatogramData } from "~/types/hplc";
@@ -18,7 +19,7 @@ export const ChromatogramChart: React.FC<ChromatogramChartProps> = ({
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [hoveredPeak, setHoveredPeak] = useState<number | null>(null);
+  const [tooltip, setTooltip] = useState<{ peakIndex: number; clientX: number; clientY: number } | null>(null);
   const [containerWidth, setContainerWidth] = useState(width || 800);
 
   // Handle responsive width
@@ -61,25 +62,9 @@ export const ChromatogramChart: React.FC<ChromatogramChartProps> = ({
     // Calculate optimal x-axis range based on data
     const maxTime = d3.max(data.time) || 20;
     
-    // If we have peaks, focus on the range that includes them with some padding
-    let xMin = 0;
-    let xMax = maxTime;
-    
-    if (data.peaks.length > 0) {
-      const lastPeakTime = Math.max(...data.peaks.map(p => p.retentionTime));
-      const firstPeakTime = Math.min(...data.peaks.map(p => p.retentionTime));
-      const peakRange = lastPeakTime - firstPeakTime;
-      
-      // Add 10% padding on each side
-      const padding = Math.max(peakRange * 0.1, 0.5);
-      xMin = Math.max(0, firstPeakTime - padding);
-      xMax = lastPeakTime + padding;
-      
-      // Ensure we show at least a reasonable time range
-      if (xMax - xMin < 2) {
-        xMax = xMin + 2;
-      }
-    }
+    // Always show from 0 to the run time or max data time
+    const xMin = 0;
+    const xMax = maxTime;
 
     // Create scales
     const xScale = d3
@@ -161,22 +146,18 @@ export const ChromatogramChart: React.FC<ChromatogramChartProps> = ({
         .style("cursor", "pointer")
         .on("mouseenter", function () {
           d3.select(this).attr("r", 6);
-          setHoveredPeak(idx);
+          const bounds = containerRef.current?.getBoundingClientRect();
+          if (!bounds) return;
+          setTooltip({
+            peakIndex: idx,
+            clientX: bounds.left + margin.left + x,
+            clientY: bounds.top + margin.top + y,
+          });
         })
         .on("mouseleave", function () {
           d3.select(this).attr("r", 4);
-          setHoveredPeak(null);
+          setTooltip(null);
         });
-
-      // Peak label
-      g.append("text")
-        .attr("x", x)
-        .attr("y", y - 15)
-        .attr("text-anchor", "middle")
-        .attr("font-size", "11px")
-        .attr("fill", "#374151")
-        .attr("font-weight", "500")
-        .text(`${peak.retentionTime.toFixed(2)} min`);
     });
 
     // Add X axis
@@ -216,22 +197,35 @@ export const ChromatogramChart: React.FC<ChromatogramChartProps> = ({
     <div ref={containerRef} className={cn("relative w-full", width && "min-w-fit", className)} style={width ? { width: `${width}px` } : undefined}>
       <svg ref={svgRef} className="border border-gray-200 rounded-lg bg-white" />
       
-      {/* Peak info tooltip */}
-      {hoveredPeak !== null && data.peaks[hoveredPeak] && (
-        <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-lg border border-gray-200 text-sm">
-          <div className="font-semibold text-gray-800 mb-2">Peak {hoveredPeak + 1}</div>
-          <div className="space-y-1 text-gray-600">
-            <div>RT: {data.peaks[hoveredPeak].retentionTime.toFixed(3)} min</div>
-            <div>Height: {data.peaks[hoveredPeak].height.toFixed(2)} mAU</div>
-            <div>Area: {data.peaks[hoveredPeak].area.toFixed(2)}</div>
-            <div>Width: {data.peaks[hoveredPeak].width.toFixed(3)} min</div>
-            <div>Asymmetry: {data.peaks[hoveredPeak].asymmetry.toFixed(2)}</div>
-            {data.peaks[hoveredPeak].resolution !== undefined && (
-              <div>Resolution: {data.peaks[hoveredPeak].resolution!.toFixed(2)}</div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Peak info tooltip near marker */}
+      {tooltip && data.peaks[tooltip.peakIndex] &&
+        createPortal(
+          (() => {
+            const tooltipWidth = 180;
+            const left = Math.min(tooltip.clientX + 8, window.innerWidth - tooltipWidth - 8);
+            const top = Math.max(8, tooltip.clientY - 8);
+            return (
+              <div
+                className="fixed bg-white p-2 rounded-lg shadow-lg border border-gray-200 text-[10px] leading-tight"
+                style={{ left, top, width: tooltipWidth }}
+              >
+                <div className="font-semibold text-gray-800 mb-1">Peak {tooltip.peakIndex + 1}</div>
+                <div className="space-y-0.5 text-gray-600">
+                  <div>RT: {data.peaks[tooltip.peakIndex].retentionTime.toFixed(3)} min</div>
+                  <div>Height: {data.peaks[tooltip.peakIndex].height.toFixed(2)} mAU</div>
+                  <div>Area: {data.peaks[tooltip.peakIndex].area.toFixed(2)}</div>
+                  <div>Width: {data.peaks[tooltip.peakIndex].width.toFixed(3)} min</div>
+                  <div>Asymmetry: {data.peaks[tooltip.peakIndex].asymmetry.toFixed(2)}</div>
+                  {data.peaks[tooltip.peakIndex].resolution !== undefined && (
+                    <div>Resolution: {data.peaks[tooltip.peakIndex].resolution!.toFixed(2)}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })(),
+          document.body
+        )
+      }
     </div>
   );
 };

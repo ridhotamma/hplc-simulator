@@ -2,9 +2,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { HiChartBar } from "react-icons/hi";
 import { FaFlask, FaCog, FaSave } from "react-icons/fa";
 import { Toaster } from "react-hot-toast";
-import { Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+  NavLink,
+  useLocation,
+} from "react-router-dom";
 import { useHPLCStore } from "~/store/hplcStore";
-import { simulateChromatogram, calculatePumpPressure, calculateDeadVolume } from "~/utils/chromatography";
+import {
+  simulateChromatogram,
+  calculatePumpPressure,
+  calculateDeadVolume,
+} from "~/utils/chromatography";
 import { SplashScreen } from "~/components/ui";
 import { SamplePage, SettingsPage, MethodsPage, ResultPage } from "~/pages";
 
@@ -18,7 +28,6 @@ const navItems = [
 function App() {
   const {
     pump,
-    injection,
     column,
     detector,
     mobilePhase,
@@ -42,24 +51,41 @@ function App() {
       mobilePhase.flowRate,
       column.length,
       column.internalDiameter,
-      column.particleSize
+      column.particleSize,
     );
-    
+
     const deadVolume = calculateDeadVolume(column);
-    
+
     if (pump.pressure !== pressure) {
       updatePump({ pressure });
     }
     if (column.deadVolume !== deadVolume) {
       updateColumn({ deadVolume });
     }
-  }, [column, mobilePhase.flowRate, column.length, column.internalDiameter, column.particleSize, column.temperature, column.stationaryPhase, pump.pressure, updatePump, updateColumn, column.deadVolume]);
+  }, [
+    column,
+    mobilePhase.flowRate,
+    column.length,
+    column.internalDiameter,
+    column.particleSize,
+    column.temperature,
+    column.stationaryPhase,
+    pump.pressure,
+    updatePump,
+    updateColumn,
+    column.deadVolume,
+  ]);
 
   useEffect(() => {
     if (mobilePhaseFlowLinked && mobilePhase.flowRate !== pump.flowRate) {
       updateMobilePhase({ flowRate: pump.flowRate });
     }
-  }, [mobilePhaseFlowLinked, pump.flowRate, mobilePhase.flowRate, updateMobilePhase]);
+  }, [
+    mobilePhaseFlowLinked,
+    pump.flowRate,
+    mobilePhase.flowRate,
+    updateMobilePhase,
+  ]);
 
   const handleRunSimulation = useCallback(() => {
     if (!sample || sample.components.length === 0) {
@@ -73,7 +99,7 @@ function App() {
 
     isSimulatingRef.current = true;
     setIsRunning(true);
-    
+
     setTimeout(() => {
       const data = simulateChromatogram(
         sample.components,
@@ -82,14 +108,21 @@ function App() {
         detector,
         mobilePhase.flowRate,
         runTime,
-        injection.volume
       );
-      
+
       setChromatogramData(data);
       setIsRunning(false);
       isSimulatingRef.current = false;
     }, 500);
-  }, [sample, column, mobilePhase, detector, runTime, injection.volume, setChromatogramData, setIsRunning]);
+  }, [
+    sample,
+    column,
+    mobilePhase,
+    detector,
+    runTime,
+    setChromatogramData,
+    setIsRunning,
+  ]);
 
   useEffect(() => {
     if (sample && sample.components.length > 0 && !isSimulatingRef.current) {
@@ -104,8 +137,8 @@ function App() {
         toastOptions={{
           duration: 3000,
           style: {
-            background: '#363636',
-            color: '#fff',
+            background: "#363636",
+            color: "#fff",
           },
         }}
       />
@@ -125,7 +158,9 @@ function App() {
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
           <div className="max-w-2xl mx-auto px-3 py-3">
             <div className="flex items-center justify-center">
-              <h1 className="text-lg font-bold text-gray-900 truncate">HPLC Simulator</h1>
+              <h1 className="text-lg font-bold text-gray-900 truncate">
+                HPLC Simulator
+              </h1>
             </div>
           </div>
         </header>

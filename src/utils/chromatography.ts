@@ -331,19 +331,7 @@ function estimateGradientRetentionTime(
   return Math.max(deadTime, tR * Math.max(0.5, tempFactor));
 }
 
-/**
- * Generate Gaussian peak
- * y = A * exp(-0.5 * ((x - μ) / σ)²)
- */
-function gaussianPeak(
-  x: number,
-  mean: number,
-  sigma: number,
-  amplitude: number
-): number {
-  const exponent = -0.5 * Math.pow((x - mean) / sigma, 2);
-  return amplitude * Math.exp(exponent);
-}
+// gaussianPeak no longer used (inline calc in simulateChromatogram) – keep for reference.
 
 /**
  * Calculate peak width at base (4σ for Gaussian)
@@ -406,8 +394,7 @@ export function simulateChromatogram(
   mobilePhase: MobilePhase,
   detector: { wavelength: number; noiseLevel: number },
   flowRate: number,
-  runTime: number,
-  injectionVolume: number = 10
+  runTime: number
 ): ChromatogramData {
   // Calculate dead volume and time
   const deadVolume = calculateDeadVolume(column);
@@ -418,60 +405,81 @@ export function simulateChromatogram(
   const plateHeight = calculatePlateHeight(column.particleSize, linearVelocity);
   const theoreticalPlates = calculateTheoreticalPlates(column.length, plateHeight);
   
-  // Generate time array (data points every 0.01 min)
-  const timePoints = Math.floor(runTime / 0.01) + 1;
+  // Generate time array (data points every 0.01 min for smoother peaks)
+  const timeStep = 0.01;
+  const timePoints = Math.floor(runTime / timeStep) + 1;
   const time: number[] = [];
   const signal: number[] = [];
   const baseline: number[] = [];
   
   for (let i = 0; i < timePoints; i++) {
-    time.push(i * 0.01);
+    time.push(i * timeStep);
     signal.push(0);
-    baseline.push(0);
+    baseline.push(detector.noiseLevel * 0.1);
   }
   
+  // First pass: predict retention times
+  const predicted = components.map((component) => {
+    const retentionTime = predictRetentionTime(component.compound, column, mobilePhase, deadTime);
+    return { component, retentionTime };
+  });
+
+  // Sort and enforce a minimum spacing between peaks to avoid piling up
+  const minSpacing = 0.25; // minutes
+  const sorted = predicted.sort((a, b) => a.retentionTime - b.retentionTime);
+  const adjustedTRs: number[] = [];
+  sorted.forEach((p, idx) => {
+    if (idx === 0) {
+      adjustedTRs.push(Math.max(0.05, p.retentionTime));
+      return;
+    }
+    const prev = adjustedTRs[idx - 1];
+    adjustedTRs.push(Math.max(p.retentionTime, prev + minSpacing));
+  });
+
+  // If adjusted times overflow run time, scale them down proportionally into 90% of run time
+  const maxAdjusted = adjustedTRs.reduce((m, t) => Math.max(m, t), 0);
+  const scale = maxAdjusted > runTime * 0.9 ? (runTime * 0.9) / maxAdjusted : 1;
+  const finalTRs = adjustedTRs.map((t) => t * scale);
+
   // Generate peaks for each component
   const peaks: Peak[] = [];
-  
-  components.forEach((component) => {
+
+  sorted.forEach(({ component }, idx) => {
     const compound = component.compound;
-    
-    // Predict retention time
-    const retentionTime = predictRetentionTime(
-      compound,
-      column,
-      mobilePhase,
-      deadTime
-    );
-    
-    // Skip if elutes after run time
-    if (retentionTime > runTime) return;
-    
-    // Calculate peak properties
-    const peakWidth = calculatePeakWidth(retentionTime, theoreticalPlates, injectionVolume, flowRate);
-    const sigma = peakWidth / 4;
-    
-    // Peak height proportional to concentration and UV absorption
+    const tR = finalTRs[idx];
+
+    if (tR > runTime || tR < 0) return;
+
+    // Narrower peaks: σ scaled down to keep peaks sharp and avoid overly wide profiles
+    const sigma = Math.max(0.005, tR / (28 * Math.sqrt(theoreticalPlates)));
+    const peakWidth = 4 * sigma;
+
     const uvAbs = compound.uvAbsorption.find(
       (abs) => Math.abs(abs.wavelength - detector.wavelength) < 20
     );
     const absorptionFactor = uvAbs ? uvAbs.absorbance : 0.1;
-    const peakHeight = component.concentration * absorptionFactor * 100;
-    
-    // Generate peak shape
-    time.forEach((t, i) => {
-      const intensity = gaussianPeak(t, retentionTime, sigma, peakHeight);
+    const peakHeight = component.concentration * absorptionFactor * 90;
+
+    // Generate Gaussian peak - only within ±5σ (99.9% of peak area)
+    const peakStart = tR - 5 * sigma;
+    const peakEnd = tR + 5 * sigma;
+
+    const startIdx = Math.max(0, Math.floor(peakStart / timeStep));
+    const endIdx = Math.min(timePoints - 1, Math.ceil(peakEnd / timeStep));
+
+    for (let i = startIdx; i <= endIdx; i++) {
+      const t = time[i];
+      const exponent = -0.5 * Math.pow((t - tR) / sigma, 2);
+      const intensity = peakHeight * Math.exp(exponent);
       signal[i] += intensity;
-    });
-    
-    // Calculate peak area
+    }
+
     const peakArea = peakHeight * sigma * Math.sqrt(2 * Math.PI);
-    
-    // Calculate asymmetry
     const asymmetry = calculateAsymmetry(column.stationaryPhase, compound);
-    
+
     peaks.push({
-      retentionTime,
+      retentionTime: Number(tR.toFixed(3)),
       height: Number(peakHeight.toFixed(2)),
       area: Number(peakArea.toFixed(2)),
       width: peakWidth,
@@ -494,11 +502,11 @@ export function simulateChromatogram(
     peaks[i].resolution = resolution;
   }
   
-  // Add detector noise
-  signal.forEach((s, i) => {
+  // Add detector noise and ensure non-negative values
+  for (let i = 0; i < signal.length; i++) {
     const noise = (Math.random() - 0.5) * detector.noiseLevel;
-    signal[i] = Number((s + noise).toFixed(3));
-  });
+    signal[i] = Math.max(0, Number((signal[i] + noise).toFixed(3)));
+  }
   
   return {
     time,
