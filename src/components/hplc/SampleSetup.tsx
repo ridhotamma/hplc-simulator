@@ -104,7 +104,7 @@ export const SampleSetup: React.FC = () => {
                       max={100}
                       allowDecimal
                       allowNegative={false}
-                      size="xs"
+                      size="md"
                       className="w-16 sm:w-20"
                     />
                     <span className="text-gray-500 text-xs whitespace-nowrap">
