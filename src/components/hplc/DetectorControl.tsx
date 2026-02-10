@@ -6,6 +6,7 @@ import type { DetectorType } from "~/types/hplc";
 const detectorTypes: { value: DetectorType; label: string }[] = [
   { value: "UV", label: "UV-Vis" },
   { value: "PDA", label: "PDA (Photodiode Array)" },
+  { value: "DAD", label: "DAD (Diode Array Detector)" },
   { value: "Fluorescence", label: "Fluorescence" },
   { value: "RI", label: "Refractive Index" },
   { value: "ELSD", label: "ELSD" },
@@ -39,8 +40,8 @@ export const DetectorControl: React.FC = () => {
         </p>
       </div>
       
-      {/* UV and PDA detectors */}
-      {(detector.type === "UV" || detector.type === "PDA") && (
+      {/* UV, PDA and DAD detectors */}
+      {(detector.type === "UV" || detector.type === "PDA" || detector.type === "DAD") && (
         <>
           <InputNumber
             label="Wavelength (nm)"
@@ -74,9 +75,11 @@ export const DetectorControl: React.FC = () => {
             allowDecimal={false}
           />
 
-          {detector.type === "PDA" && (
+          {(detector.type === "PDA" || detector.type === "DAD") && (
             <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-              <h4 className="text-sm font-medium text-blue-900 mb-2">PDA Settings</h4>
+              <h4 className="text-sm font-medium text-blue-900 mb-2">
+                {detector.type === "PDA" ? "PDA" : "DAD"} Settings
+              </h4>
               <div className="grid grid-cols-2 gap-3">
                 <InputNumber
                   label="Start λ (nm)"
@@ -240,6 +243,7 @@ export const DetectorControl: React.FC = () => {
 // Helper function for detector descriptions
 function getDetectorDescription(type: DetectorType): string {
   const descriptions: Record<DetectorType, string> = {
+    DAD: "Diode array detector - simultaneous multi-wavelength detection",
     UV: "Measures UV absorption at a single wavelength",
     PDA: "Captures full UV-Vis spectrum at each time point (3D data)",
     Fluorescence: "Detects fluorescence emission (high sensitivity)",
