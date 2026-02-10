@@ -611,6 +611,226 @@ export const compoundLibrary: Compound[] = [
     ],
     category: "biological",
   },
+
+  // ========== SOLVENTS & BASIC COMPOUNDS ==========
+  {
+    id: "water",
+    name: "Water",
+    molecularWeight: 18.015,
+    pKa: [14.0],
+    logP: -1.38,
+    uvAbsorption: [
+      { wavelength: 190, absorbance: 0.15 },
+      { wavelength: 200, absorbance: 0.05 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "acetonitrile",
+    name: "Acetonitrile",
+    molecularWeight: 41.05,
+    pKa: [25.0],
+    logP: -0.34,
+    uvAbsorption: [
+      { wavelength: 190, absorbance: 0.45 },
+      { wavelength: 200, absorbance: 0.20 },
+    ],
+    category: "biological",
+  },
+
+  // ========== SKINCARE ACTIVES ==========
+  
+  // Vitamins & Antioxidants
+  {
+    id: "niacinamide",
+    name: "Niacinamide (Vitamin B3)",
+    molecularWeight: 122.12,
+    pKa: [3.35, 14.0],
+    logP: -0.40,
+    uvAbsorption: [
+      { wavelength: 263, absorbance: 0.92 },
+      { wavelength: 280, absorbance: 0.45 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "retinol",
+    name: "Retinol (Vitamin A)",
+    molecularWeight: 286.45,
+    pKa: [18.0],
+    logP: 5.64,
+    uvAbsorption: [
+      { wavelength: 325, absorbance: 0.95 },
+      { wavelength: 340, absorbance: 0.82 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "alpha-tocopherol",
+    name: "Alpha-Tocopherol (Vitamin E)",
+    molecularWeight: 430.71,
+    pKa: [12.0],
+    logP: 10.7,
+    uvAbsorption: [
+      { wavelength: 292, absorbance: 0.88 },
+      { wavelength: 298, absorbance: 0.92 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "resveratrol",
+    name: "Resveratrol",
+    molecularWeight: 228.24,
+    pKa: [8.8, 9.8],
+    logP: 3.10,
+    uvAbsorption: [
+      { wavelength: 307, absorbance: 0.95 },
+      { wavelength: 320, absorbance: 0.88 },
+    ],
+    category: "biological",
+  },
+
+  // Alpha Hydroxy Acids (AHAs)
+  {
+    id: "glycolic-acid",
+    name: "Glycolic Acid",
+    molecularWeight: 76.05,
+    pKa: [3.83],
+    logP: -1.07,
+    uvAbsorption: [
+      { wavelength: 200, absorbance: 0.35 },
+      { wavelength: 210, absorbance: 0.22 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "lactic-acid",
+    name: "Lactic Acid",
+    molecularWeight: 90.08,
+    pKa: [3.86],
+    logP: -0.62,
+    uvAbsorption: [
+      { wavelength: 200, absorbance: 0.38 },
+      { wavelength: 210, absorbance: 0.25 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "mandelic-acid",
+    name: "Mandelic Acid",
+    molecularWeight: 152.15,
+    pKa: [3.41],
+    logP: 0.28,
+    uvAbsorption: [
+      { wavelength: 258, absorbance: 0.75 },
+      { wavelength: 265, absorbance: 0.82 },
+    ],
+    category: "biological",
+  },
+
+  // Beta Hydroxy Acid (BHA) - Salicylic acid already exists above
+
+  // Polyhydroxy Acids (PHAs)
+  {
+    id: "gluconolactone",
+    name: "Gluconolactone",
+    molecularWeight: 178.14,
+    pKa: [3.7],
+    logP: -2.25,
+    uvAbsorption: [
+      { wavelength: 200, absorbance: 0.28 },
+      { wavelength: 210, absorbance: 0.18 },
+    ],
+    category: "biological",
+  },
+
+  // Skin Brightening Agents
+  {
+    id: "kojic-acid",
+    name: "Kojic Acid",
+    molecularWeight: 142.11,
+    pKa: [7.65],
+    logP: -0.51,
+    uvAbsorption: [
+      { wavelength: 269, absorbance: 0.92 },
+      { wavelength: 280, absorbance: 0.85 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "arbutin",
+    name: "Arbutin",
+    molecularWeight: 272.25,
+    pKa: [9.8],
+    logP: -0.82,
+    uvAbsorption: [
+      { wavelength: 221, absorbance: 0.78 },
+      { wavelength: 283, absorbance: 0.92 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "tranexamic-acid",
+    name: "Tranexamic Acid",
+    molecularWeight: 157.21,
+    pKa: [4.3, 10.6],
+    logP: -2.14,
+    uvAbsorption: [
+      { wavelength: 230, absorbance: 0.65 },
+      { wavelength: 280, absorbance: 0.18 },
+    ],
+    category: "biological",
+  },
+
+  // Other Skincare Actives
+  {
+    id: "azelaic-acid",
+    name: "Azelaic Acid",
+    molecularWeight: 188.22,
+    pKa: [4.55, 5.50],
+    logP: 1.57,
+    uvAbsorption: [
+      { wavelength: 210, absorbance: 0.42 },
+      { wavelength: 230, absorbance: 0.28 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "hyaluronic-acid",
+    name: "Hyaluronic Acid (disaccharide unit)",
+    molecularWeight: 401.30,
+    pKa: [3.2, 12.0],
+    logP: -4.52,
+    uvAbsorption: [
+      { wavelength: 200, absorbance: 0.25 },
+      { wavelength: 210, absorbance: 0.15 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "panthenol",
+    name: "Panthenol (Provitamin B5)",
+    molecularWeight: 205.25,
+    pKa: [13.3],
+    logP: -1.12,
+    uvAbsorption: [
+      { wavelength: 205, absorbance: 0.52 },
+      { wavelength: 220, absorbance: 0.28 },
+    ],
+    category: "biological",
+  },
+  {
+    id: "ceramide",
+    name: "Ceramide NP",
+    molecularWeight: 594.97,
+    pKa: [9.5],
+    logP: 9.24,
+    uvAbsorption: [
+      { wavelength: 210, absorbance: 0.35 },
+      { wavelength: 280, absorbance: 0.12 },
+    ],
+    category: "biological",
+  },
 ];
 
 export function getCompoundById(id: string): Compound | undefined {
