@@ -278,7 +278,7 @@ function App() {
         <main className="max-w-2xl mx-auto px-3 py-3 pb-20">
           <Routes>
             <Route path="/" element={<Navigate to="/sample" replace />} />
-            <Route path="/sample" element={<SampleSetup />} />
+            <Route path="/sample" element={<SampleSetup onClearChromatogram={() => setChromatogramData(null)} />} />
             <Route path="/settings" element={renderSettings()} />
             <Route path="/methods" element={<MethodManager />} />
             <Route path="/result" element={renderResult()} />

@@ -7,7 +7,11 @@ import { Button, InputNumber, Modal } from "~/components/ui";
 import type { SampleComponent } from "~/types/hplc";
 import { IoRefresh } from "react-icons/io5";
 
-export const SampleSetup: React.FC = () => {
+interface SampleSetupProps {
+  onClearChromatogram?: () => void;
+}
+
+export const SampleSetup: React.FC<SampleSetupProps> = ({ onClearChromatogram }) => {
   const { sample, updateSample } = useHPLCStore();
   const [selectedCompoundIds, setSelectedCompoundIds] = useState<Set<string>>(
     new Set(sample?.components.map((c) => c.compound.id) || []),
@@ -69,6 +73,7 @@ export const SampleSetup: React.FC = () => {
     setSelectedCompoundIds(new Set());
     setConcentrations(new Map());
     updateSample(null);
+    onClearChromatogram?.();
     toast.success("All compounds cleared");
   };
 
